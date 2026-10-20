@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登录 | ERP管理系统</title>
+    <link rel="stylesheet" href="style/css/element-ui.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(180deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        /* 背景动画 */
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                radial-gradient(circle at 20% 50%, rgba(0, 245, 255, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(0, 212, 255, 0.15) 0%, transparent 50%);
+            animation: bgPulse 10s ease-in-out infinite;
+            pointer-events: none;
+        }
+        
+        @keyframes bgPulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+        
+        /* 漂浮粒子 */
+        .particle {
+            position: absolute;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(0, 245, 255, 0.8), transparent);
+            animation: float 15s infinite;
+            pointer-events: none;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0) translateX(0); opacity: 0; }
+            10% { opacity: 0.5; }
+            90% { opacity: 0.5; }
+            100% { transform: translateY(-100vh) translateX(50px); opacity: 0; }
+        }
+        
+        .login-container {
+            width: 350px;
+            background: rgba(15, 32, 39, 0.85);
+            backdrop-filter: blur(20px);
+            border-radius: 15px;
+            border: 1px solid rgba(0, 245, 255, 0.2);
+            box-shadow: 0 20px 60px rgba(0, 245, 255, 0.3), 0 0 40px rgba(0, 245, 255, 0.1);
+            overflow: hidden;
+            position: relative;
+            z-index: 10;
+        }
+        
+        .login-header {
+            background: linear-gradient(135deg, rgba(0, 245, 255, 0.2), rgba(0, 212, 255, 0.2));
+            padding: 10px 0px;
+            text-align: center;
+            border-bottom: 1px solid rgba(0, 245, 255, 0.3);
+            position: relative;
+        }
+        
+        .login-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #00f5ff, transparent);
+            animation: glow 3s ease-in-out infinite;
+        }
+        
+        @keyframes glow {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+        
+        .login-header h2 {
+            margin: 0;
+            font-size: 25px;
+            background: linear-gradient(to right, #00f5ff, #00d4ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 0 20px rgba(0, 245, 255, 0.5);
+            letter-spacing: 3px;
+            font-weight: 600;
+        }
+        
+        .login-header p {
+            margin-top: 8px;
+            color: rgba(0, 245, 255, 0.8);
+            font-size: 14px;
+            letter-spacing: 1px;
+        }
+        
+        .login-body {
+            padding: 25px;
+        }
+        
+        .el-tabs__header {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 5px;
+        }
+        
+        .el-tabs__item {
+            color: rgba(255, 255, 255, 0.6) !important;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+        
+        
+        .el-tabs__nav-wrap::after {
+            background-color: transparent;
+        }
+        
+        .form-item {
+            margin-bottom: 20px;
+        }
+        
+        .el-input__inner {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(0, 245, 255, 0.3);
+            color: #fff;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .el-input__inner:focus {
+            border-color: #00f5ff;
+            box-shadow: 0 0 15px rgba(0, 245, 255, 0.3);
+            background: rgba(0, 0, 0, 0.5);
+        }
+        
+        .el-input__icon {
+            color: #00f5ff;
+        }
+        
+        .el-form-item__label {
+            color: rgba(0, 245, 255, 0.9);
+            font-weight: 500;
+        }
+        
+        .btn-submit {
+            width: 100%;
+            margin-top: 15px;
+            background: linear-gradient(135deg, #00f5ff, #00d4ff);
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            letter-spacing: 2px;
+            box-shadow: 0 5px 20px rgba(0, 245, 255, 0.4);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(0, 245, 255, 0.6);
+        }
+        
+        .btn-submit:active {
+            transform: translateY(0);
+        }
+        
+        .company-step {
+            padding-top: 25px;
+            border-top: 1px solid rgba(0, 245, 255, 0.2);
+        }
+        
+        .step-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #00f5ff;
+            text-shadow: 0 0 10px rgba(0, 245, 255, 0.5);
+            letter-spacing: 1px;
+        }
+        
+        .company-card {
+            border: 1px solid rgba(0, 245, 255, 0.2);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(0, 0, 0, 0.2);
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .company-card:hover {
+            border-color: #00f5ff;
+            box-shadow: 0 0 20px rgba(0, 245, 255, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        .company-card.active {
+            border-color: #00f5ff;
+            background: linear-gradient(135deg, rgba(0, 245, 255, 0.2), rgba(0, 212, 255, 0.2));
+            box-shadow: 0 0 25px rgba(0, 245, 255, 0.5);
+        }
+        
+        .company-card strong {
+            color: #00f5ff;
+            font-size: 15px;
+        }
+        
+        .company-card div:last-child {
+            color: rgba(255, 255, 255, 0.6);
+        }
+        
+        .el-button--success {
+            background: linear-gradient(135deg, #00f5ff, #00d4ff);
+            border: none;
+            box-shadow: 0 5px 20px rgba(0, 245, 255, 0.4);
+        }
+        
+        .el-button--success:hover {
+            background: linear-gradient(135deg, #00d4ff, #00c3ff);
+            box-shadow: 0 8px 30px rgba(0, 245, 255, 0.6);
+        }
+        
+        /* 滚动条样式 */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #00f5ff, #00d4ff);
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <!-- 漂浮粒子 -->
+    <div class="particle" style="width: 20px; height: 20px; left: 10%; bottom: -20px; animation-delay: 0s;"></div>
+    <div class="particle" style="width: 25px; height: 25px; left: 30%; bottom: -20px; animation-delay: 2s;"></div>
+    <div class="particle" style="width: 18px; height: 18px; left: 50%; bottom: -20px; animation-delay: 4s;"></div>
+    <div class="particle" style="width: 22px; height: 22px; left: 70%; bottom: -20px; animation-delay: 6s;"></div>
+    <div class="particle" style="width: 20px; height: 20px; left: 90%; bottom: -20px; animation-delay: 8s;"></div>
+    <div class="particle" style="width: 20px; height: 20px; left: 20%; bottom: -20px; animation-delay: 4s;"></div>
+    <div class="particle" style="width: 25px; height: 25px; left: 40%; bottom: -20px; animation-delay: 3s;"></div>
+    <div class="particle" style="width: 18px; height: 18px; left: 60%; bottom: -20px; animation-delay: 2s;"></div>
+    <div class="particle" style="width: 22px; height: 22px; left: 80%; bottom: -20px; animation-delay: 0s;"></div>
+    <div class="particle" style="width: 20px; height: 20px; left: 90%; bottom: -20px; animation-delay: 4s;"></div>
+    
+    <div id="app">
+        <div class="login-container">
+            <div class="login-header">
+                <h2>森信 ERP</h2>
+            </div>
+            <div class="login-body">
+                <el-tabs v-model="activeTab"  v-if="!showCompanyStep">
+                    <el-tab-pane label="登录" name="login" >
+                        <el-form :model="loginForm" :rules="loginRules" ref="loginForm">
+                            <el-form-item label="用户名" prop="username" class="form-item">
+                                <el-input v-model="loginForm.username" placeholder="请输入用户名"></el-input>
+                            </el-form-item>
+                            <el-form-item label="密码" prop="password" class="form-item">
+                                <el-input v-model="loginForm.password" type="password" placeholder="请输入密码"></el-input>
+                            </el-form-item>
+                            <el-form-item class="form-item">
+                                <el-button type="primary" @click="handleLogin" class="btn-submit">登录</el-button>
+                            </el-form-item>
+                            <el-form-item class="form-item" style="float: right;">
+                                <el-link type="info" @click="openTest">手机测试</el-link>
+                            </el-form-item>
+                        </el-form>
+                    </el-tab-pane>
+                    <el-tab-pane label="注册" name="register">
+                        <el-form :model="registerForm" :rules="registerRules" ref="registerForm">
+                            <el-form-item label="用户名" prop="username" class="form-item">
+                                <el-input v-model="registerForm.username" placeholder="请输入用户名"></el-input>
+                            </el-form-item>
+                            <el-form-item label="密码" prop="password" class="form-item">
+                                <el-input v-model="registerForm.password" type="password" placeholder="请输入密码"></el-input>
+                            </el-form-item>
+                            <el-form-item label="确认密码" prop="confirmPassword" class="form-item">
+                                <el-input v-model="registerForm.confirmPassword" type="password" placeholder="请确认密码"></el-input>
+                            </el-form-item>
+                            <el-form-item class="form-item">
+                                <el-button type="primary" @click="handleRegister" class="btn-submit">注册</el-button>
+                            </el-form-item>
+                        </el-form>
+                    </el-tab-pane>
+                </el-tabs>
+                
+                <!-- 企业选择步骤 -->
+                <div v-if="showCompanyStep" class="company-step">
+                    <div class="step-title">选择企业</div>
+                    <div v-if="companies.length > 0">
+                        <div 
+                            v-for="company in companies" 
+                            :key="company.cid"
+                            class="company-card" 
+                            :class="{ active: selectedCompany === company.cid }"
+                            @click="selectedCompany = company.cid"
+                        >
+                            <div><strong>{{ company.company_name }}</strong></div>
+                            <div style="font-size: 12px; color: #999; margin-top: 5px;">
+                                状态：{{ company.state == 1 ? '正常' : '关闭' }}
+                            </div>
+                        </div>
+                    </div>
+                    <div v-else class="company-card">
+                        <div style="text-align: center; color: #999;">暂无可用企业，请联系管理员创建</div>
+                    </div>
+                    <el-button type="success" @click="joinOrCreateCompany" style="margin-top: 15px; width: 100%;" :disabled="!selectedCompany">确认选择</el-button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="style/js/vue.min.js"></script>
+    <script src="style/js/element-ui.js"></script>
+    <script src="style/js/axios.min.js"></script>
+    <script>
+        new Vue({
+            el: '#app',
+            data() {
+                return {
+                    activeTab: 'login',
+                    showCompanyStep: false,
+                    companies: [],
+                    selectedCompany: null,
+                    loginForm: {
+                        username: '',
+                        password: ''
+                    },
+                    registerForm: {
+                        username: '',
+                        password: '',
+                        confirmPassword: ''
+                    },
+                    loginRules: {
+                        username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
+                        password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
+                    },
+                    registerRules: {
+                        username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
+                        password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
+                        confirmPassword: [
+                            { required: true, message: '请确认密码', trigger: 'blur' },
+                            { validator: (rule, value, callback) => {
+                                if (value !== this.registerForm.password) {
+                                    callback(new Error('两次输入密码不一致'));
+                                } else {
+                                    callback();
+                                }
+                            }, trigger: 'blur' }
+                        ]
+                    }
+                };
+            },
+            methods: {
+                // 打开测试页面
+                openTest() {
+                    window.open('test.html', '_blank');
+                },
+                // 处理登录
+                handleLogin() {
+                    this.$refs.loginForm.validate((valid) => {
+                        if (valid) {
+                            axios.post('/API/login.php', {
+                                action: 'login',
+                                username: this.loginForm.username,
+                                password: this.loginForm.password
+                            })
+                            .then(response => {
+                                if (response.data.code === 200) {
+                                    // 检查是否需要选择企业
+                                    if (response.data.data.need_select_company) {
+                                        this.showCompanyStep = true;
+                                        this.getCompanies(response.data.data.token);
+                                    } else {
+                                        // 存储 token 和用户信息
+                                        localStorage.setItem('token', response.data.data.token);
+                                        localStorage.setItem('uid', response.data.data.uid);
+                                        localStorage.setItem('cid', response.data.data.cid || '');
+                                        localStorage.setItem('username', response.data.data.username);
+                                        // 直接跳转到主页面
+                                        window.location.href = 'overview.html';
+                                    }
+                                } else {
+                                    this.$message.error(response.data.msg);
+                                }
+                            })
+                            .catch(error => {
+                                this.$message.error('登录失败');
+                                console.error(error);
+                            });
+                        }
+                    });
+                },
+                
+                // 处理注册
+                handleRegister() {
+                    this.$refs.registerForm.validate((valid) => {
+                        if (valid) {
+                            axios.post('/API/register.php', {
+                                action: 'register',
+                                username: this.registerForm.username,
+                                password: this.registerForm.password
+                            })
+                            .then(response => {
+                                if (response.data.code === 200) {
+                                    this.$message.success('注册成功，请登录');
+                                    this.activeTab = 'login';
+                                } else {
+                                    this.$message.error(response.data.msg);
+                                }
+                            })
+                            .catch(error => {
+                                this.$message.error('注册失败');
+                                console.error(error);
+                            });
+                        }
+                    });
+                },
+                
+                // 获取企业列表
+                getCompanies(token) {
+                    axios.post('/API/company.php', {
+                        action: 'get_companies',
+                        token: token
+                    })
+                    .then(response => {
+                        if (response.data.code === 200) {
+                            this.companies = response.data.data;
+                        } else {
+                            this.$message.error(response.data.msg);
+                        }
+                    })
+                    .catch(error => {
+                        console.error(error);
+                    });
+                },
+                
+                // 加入或创建企业
+                joinOrCreateCompany() {
+                   this.$message.error("请联系企业负责人加入企业");
+                }
+            }
+        });
+    </script>
+</body>
+</html>

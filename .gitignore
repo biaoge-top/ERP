@@ -1,0 +1,15 @@
+# 真实数据库配置（含敏感凭据，禁止提交）
+API/config.php
+API/db.php
+
+# 备份压缩包
+*.zip
+
+# 系统文件
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# 编辑器
+.idea/
+.vscode/

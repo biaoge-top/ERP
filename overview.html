@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>总览</title>
+    <link rel="stylesheet" href="../style/css/element-ui.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background-color: #f5f5f5;
+            padding: 20px;
+        }
+        .overview-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .section-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            margin: 20px 0 15px 0;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #409EFF;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 4fr));
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+        }
+        .stat-label {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        .stat-value {
+            font-size: 28px;
+            font-weight: bold;
+            color: #409EFF;
+        }
+        .stat-value.profit {
+            color: #67C23A;
+        }
+        .stat-value.loss {
+            color: #F56C6C;
+        }
+        .table-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+        .table-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 15px;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+        .stat-change {
+            font-size: 12px;
+            margin-top: 8px;
+        }
+        .stat-change.up {
+            color: #67C23A;
+        }
+        .stat-change.down {
+            color: #F56C6C;
+        }
+        .stat-change.same {
+            color: #909399;
+        }
+        .chart-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+        .overview-container{
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="overview-container" :style="wait">
+            <div class="section-title">总体数据</div>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">总销售</div>
+                    <div class="stat-value">¥{{ overviewData.total_sales ? parseFloat(overviewData.total_sales).toFixed(2) : '0.00' }}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">总采购</div>
+                    <div class="stat-value">¥{{ overviewData.total_purchase ? parseFloat(overviewData.total_purchase).toFixed(2) : '0.00' }}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">总利润</div>
+                    <div class="stat-value profit">¥{{ overviewData.total_profit ? parseFloat(overviewData.total_profit).toFixed(2) : '0.00' }}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">总手机</div>
+                    <div class="stat-value">{{ overviewData.total_phones || 0 }}</div>
+                </div>
+            </div>
+            
+            <div class="section-title">本月数据</div>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">本月销售</div>
+                    <div class="stat-value">¥{{ overviewData.month_sales ? parseFloat(overviewData.month_sales).toFixed(2) : '0.00' }}</div>
+                    <div class="stat-change" :class="getChangeClass(overviewData.sales_change)">
+                        {{ getChangeText(overviewData.sales_change) }}
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">本月采购</div>
+                    <div class="stat-value">¥{{ overviewData.month_purchase ? parseFloat(overviewData.month_purchase).toFixed(2) : '0.00' }}</div>
+                    <div class="stat-change" :class="getChangeClass(overviewData.purchase_change)">
+                        {{ getChangeText(overviewData.purchase_change) }}
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">本月利润</div>
+                    <div class="stat-value profit">¥{{ overviewData.month_profit ? parseFloat(overviewData.month_profit).toFixed(2) : '0.00' }}</div>
+                    <div class="stat-change" :class="getChangeClass(overviewData.profit_change)">
+                        {{ getChangeText(overviewData.profit_change) }}
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">本月销售手机量</div>
+                    <div class="stat-value">{{ overviewData.month_sales_count || 0 }}</div>
+                    <div class="stat-change" :class="getChangeClass(overviewData.sales_count_change)">
+                        {{ getChangeText(overviewData.sales_count_change, true) }}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section-title">上月数据</div>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">上月销售</div>
+                    <div class="stat-value">¥{{ overviewData.last_month_sales ? parseFloat(overviewData.last_month_sales).toFixed(2) : '0.00' }}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">上月采购</div>
+                    <div class="stat-value">¥{{ overviewData.last_month_purchase ? parseFloat(overviewData.last_month_purchase).toFixed(2) : '0.00' }}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">上月利润</div>
+                    <div class="stat-value profit">¥{{ overviewData.last_month_profit ? parseFloat(overviewData.last_month_profit).toFixed(2) : '0.00' }}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">上月销售手机量</div>
+                    <div class="stat-value">{{ overviewData.last_month_sales_count || 0 }}</div>
+                </div>
+            </div>
+            
+            <div class="section-title">近十二个月趋势</div>
+            <div class="chart-container">
+                <div style="margin-bottom: 15px; display: flex; align-items: center; gap: 15px;">
+                    <span>选择日期范围：</span>
+                    <el-date-picker
+                        v-model="chartDateRange"
+                        type="daterange"
+                        range-separator="至"
+                        start-placeholder="开始日期"
+                        end-placeholder="结束日期"
+                        value-format="yyyy-MM-dd"
+                        @change="updateChart"
+                        :picker-options="pickerOptions">
+                    </el-date-picker>
+                </div>
+                <div id="trendChart" style="width: 100%; height: 400px;"></div>
+            </div>
+
+            <div class="section-title">库存数据</div>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">库存手机量</div>
+                    <div class="stat-value">{{ overviewData.pending_sales || 0 }}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">库存总金额</div>
+                    <div class="stat-value">¥{{ overviewData.pending_value ? parseFloat(overviewData.pending_value).toFixed(2) : '0.00' }}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">库存总利润</div>
+                    <div class="stat-value profit">¥{{ overviewData.pending_profit ? parseFloat(overviewData.pending_profit).toFixed(2) : '0.00' }}</div>
+                </div>
+            </div>
+
+            <div style="
+                    display: flex;
+                    gap: 20px;
+                    flex-direction: row;
+                    flex-wrap: wrap;">
+                <div class="table-container">
+                    <div class="table-title">销售最多的手机（前5）</div>
+                    <el-table :data="overviewData.top_sales_phones || []" stripe style="width: 100%">
+                        <el-table-column label="型号"  width="150">
+                            <template slot-scope="scope">
+                                <span>{{ scope.row.brand }} {{ scope.row.series }} {{ scope.row.model }}</span>
+                            </template>
+                        </el-table-column>
+                        <el-table-column prop="sales_count" label="销售量"></el-table-column>
+                        <el-table-column prop="avg_profit" label="均利">
+                            <template slot-scope="scope">
+                                <span :style="{ color: scope.row.avg_profit >= 0 ? '#67C23A' : '#F56C6C' }">
+                                    ¥{{ scope.row.avg_profit ? parseFloat(scope.row.avg_profit).toFixed(2) : '0.00' }}
+                                </span>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                </div>
+                
+                <div class="table-container">
+                    <div class="table-title">库存最多的手机（前5）</div>
+                    <el-table :data="overviewData.top_stock_phones || []" stripe style="width: 100%">
+                        <el-table-column label="型号"  width="150">
+                            <template slot-scope="scope">
+                                <span>{{ scope.row.brand }} {{ scope.row.series }} {{ scope.row.model }}</span>
+                            </template>
+                        </el-table-column>
+                        <el-table-column prop="stock_count" label="库存数"></el-table-column>
+                    </el-table>
+                </div>
+                <div class="table-container">
+                <div class="table-title">亏损最多的手机（前 5）</div>
+                <el-table :data="overviewData.top_loss_phones || []" stripe style="width: 100%">
+                    <el-table-column label="型号"  width="150">
+                            <template slot-scope="scope">
+                                <span>{{ scope.row.brand }} {{ scope.row.series }} {{ scope.row.model }}</span>
+                            </template>
+                        </el-table-column>
+                    <el-table-column prop="selling_price" label="售价"></el-table-column>
+                    <el-table-column prop="profit" label="利润">
+                        <template slot-scope="scope">
+                            <span style="color: #F56C6C;">
+                                ¥{{ scope.row.profit ? parseFloat(scope.row.profit).toFixed(2) : '0.00' }}
+                            </span>
+                        </template>
+                    </el-table-column>
+                </el-table>
+                </div>
+                
+                <div class="table-container">
+                    <div class="table-title">利润最高的手机（前 5）</div>
+                    <el-table :data="overviewData.top_profit_phones || []" stripe style="width: 100%">
+                        <el-table-column label="型号" width="150">
+                            <template slot-scope="scope">
+                                <span>{{ scope.row.brand }} {{ scope.row.series }} {{ scope.row.model }}</span>
+                            </template>
+                        </el-table-column>
+                        <el-table-column prop="selling_price" label="售价"></el-table-column>
+                        <el-table-column prop="profit" label="利润">
+                            <template slot-scope="scope">
+                                <span :style="{ color: scope.row.profit >= 0 ? '#67C23A' : '#F56C6C' }">
+                                    ¥{{ scope.row.profit ? parseFloat(scope.row.profit).toFixed(2) : '0.00' }}
+                                </span>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="../style/js/vue.min.js"></script>
+    <script src="../style/js/element-ui.js"></script>
+    <script src="../style/js/axios.min.js"></script>
+    <script src="../style/js/echarts.min.js"></script>
+    <script>
+        new Vue({
+            el: '#app',
+            data() {
+                return {
+                    wait:'display:block;',
+                    overviewData: {},
+                    trendChart: null,
+                    chartDateRange: null,
+                    pickerOptions: {
+                        shortcuts: [{
+                            text: '最近6个月',
+                            onClick(picker) {
+                                const end = new Date();
+                                const start = new Date();
+                                start.setMonth(start.getMonth() - 6);
+                                picker.$emit('pick', [start, end]);
+                            }
+                        }, {
+                            text: '最近12个月',
+                            onClick(picker) {
+                                const end = new Date();
+                                const start = new Date();
+                                start.setMonth(start.getMonth() - 12);
+                                picker.$emit('pick', [start, end]);
+                            }
+                        }, {
+                            text: '今年',
+                            onClick(picker) {
+                                const end = new Date();
+                                const start = new Date(new Date().getFullYear(), 0, 1);
+                                picker.$emit('pick', [start, end]);
+                            }
+                        }]
+                    }
+                };
+            },
+            mounted() {
+                this.fetchOverview();
+            },
+            methods: {
+                fetchOverview() {
+                    axios.post('/API/overview.php', {
+                        action: 'get',
+                        token: localStorage.getItem('token')
+                    })
+                    .then(response => {
+                        if (response.data.code === 200) {
+                            this.overviewData = response.data.data;
+                            this.$nextTick(() => {
+                                this.initTrendChart();
+                            });
+                        } else {
+                            if (response.data.code === 401) {
+                                localStorage.removeItem('token');
+                                window.location.href = 'login.html';
+                            }
+                            this.$message.error(response.data.msg);
+                        }
+                    })
+                    .catch(error => {
+                        this.$message.error('获取总览数据失败');
+                        console.error(error);
+                    });
+                },
+                getChangeClass(change) {
+                    if (!change || change === 0) return 'same';
+                    return change > 0 ? 'up' : 'down';
+                },
+                getChangeText(change, isCount = false) {
+                    if (!change || change === 0) return '与上月持平';
+                    const unit = isCount ? '台' : '元';
+                    const absChange = Math.abs(change).toFixed(2);
+                    if (change > 0) {
+                        return `较上月上升 ${isCount ? Math.abs(change) : absChange}${unit}`;
+                    } else {
+                        return `较上月下降 ${isCount ? Math.abs(change) : absChange}${unit}`;
+                    }
+                },
+                initTrendChart() {
+                    if (this.trendChart) {
+                        this.trendChart.dispose();
+                    }
+                    this.trendChart = echarts.init(document.getElementById('trendChart'));
+                    const months = this.overviewData.trend_months || [];
+                    const salesData = this.overviewData.trend_sales || [];
+                    const purchaseData = this.overviewData.trend_purchase || [];
+                    const profitData = this.overviewData.trend_profit || [];
+                    
+                    const option = {
+                        tooltip: {
+                            trigger: 'axis',
+                            axisPointer: {
+                                type: 'cross'
+                            }
+                        },
+                        legend: {
+                            data: ['销售', '采购', '利润']
+                        },
+                        grid: {
+                            left: '3%',
+                            right: '4%',
+                            bottom: '3%',
+                            containLabel: true
+                        },
+                        xAxis: {
+                            type: 'category',
+                            boundaryGap: false,
+                            data: months
+                        },
+                        yAxis: {
+                            type: 'value',
+                            axisLabel: {
+                                formatter: '¥{value}'
+                            }
+                        },
+                        series: [
+                            {
+                                name: '销售',
+                                type: 'line',
+                                smooth: true,
+                                data: salesData,
+                                itemStyle: { color: '#409EFF' },
+                                areaStyle: {
+                                    color: {
+                                        type: 'linear',
+                                        x: 0, y: 0, x2: 0, y2: 1,
+                                        colorStops: [
+                                            { offset: 0, color: 'rgba(64, 158, 255, 0.3)' },
+                                            { offset: 1, color: 'rgba(64, 158, 255, 0.05)' }
+                                        ]
+                                    }
+                                }
+                            },
+                            {
+                                name: '采购',
+                                type: 'line',
+                                smooth: true,
+                                data: purchaseData,
+                                itemStyle: { color: '#E6A23C' },
+                                areaStyle: {
+                                    color: {
+                                        type: 'linear',
+                                        x: 0, y: 0, x2: 0, y2: 1,
+                                        colorStops: [
+                                            { offset: 0, color: 'rgba(230, 162, 60, 0.3)' },
+                                            { offset: 1, color: 'rgba(230, 162, 60, 0.05)' }
+                                        ]
+                                    }
+                                }
+                            },
+                            {
+                                name: '利润',
+                                type: 'line',
+                                smooth: true,
+                                data: profitData,
+                                itemStyle: { color: '#67C23A' },
+                                areaStyle: {
+                                    color: {
+                                        type: 'linear',
+                                        x: 0, y: 0, x2: 0, y2: 1,
+                                        colorStops: [
+                                            { offset: 0, color: 'rgba(103, 194, 58, 0.3)' },
+                                            { offset: 1, color: 'rgba(103, 194, 58, 0.05)' }
+                                        ]
+                                    }
+                                }
+                            }
+                        ]
+                    };
+                    this.trendChart.setOption(option);
+                    window.addEventListener('resize', () => {
+                        if (this.trendChart) {
+                            this.trendChart.resize();
+                        }
+                    });
+                },
+                updateChart() {
+                    if (!this.chartDateRange || this.chartDateRange.length !== 2) {
+                        this.initTrendChart();
+                        return;
+                    }
+                    
+                    const startDate = this.chartDateRange[0];
+                    const endDate = this.chartDateRange[1];
+                    
+                    axios.post('/API/overview.php', {
+                        action: 'get_trend',
+                        token: localStorage.getItem('token'),
+                        start_date: startDate,
+                        end_date: endDate
+                    })
+                    .then(response => {
+                        if (response.data.code === 200) {
+                            const data = response.data.data;
+                            this.renderChart(data.months, data.sales, data.purchase, data.profit);
+                        } else {
+                            this.$message.error(response.data.msg);
+                        }
+                    })
+                    .catch(error => {
+                        this.$message.error('获取趋势数据失败');
+                        console.error(error);
+                    });
+                },
+                renderChart(months, salesData, purchaseData, profitData) {
+                    if (this.trendChart) {
+                        this.trendChart.dispose();
+                    }
+                    this.trendChart = echarts.init(document.getElementById('trendChart'));
+                    
+                    const option = {
+                        tooltip: {
+                            trigger: 'axis',
+                            axisPointer: {
+                                type: 'cross'
+                            }
+                        },
+                        legend: {
+                            data: ['销售', '采购', '利润']
+                        },
+                        grid: {
+                            left: '3%',
+                            right: '4%',
+                            bottom: '3%',
+                            containLabel: true
+                        },
+                        xAxis: {
+                            type: 'category',
+                            boundaryGap: false,
+                            data: months
+                        },
+                        yAxis: {
+                            type: 'value',
+                            axisLabel: {
+                                formatter: '¥{value}'
+                            }
+                        },
+                        series: [
+                            {
+                                name: '销售',
+                                type: 'line',
+                                smooth: true,
+                                data: salesData,
+                                itemStyle: { color: '#409EFF' },
+                                areaStyle: {
+                                    color: {
+                                        type: 'linear',
+                                        x: 0, y: 0, x2: 0, y2: 1,
+                                        colorStops: [
+                                            { offset: 0, color: 'rgba(64, 158, 255, 0.3)' },
+                                            { offset: 1, color: 'rgba(64, 158, 255, 0.05)' }
+                                        ]
+                                    }
+                                }
+                            },
+                            {
+                                name: '采购',
+                                type: 'line',
+                                smooth: true,
+                                data: purchaseData,
+                                itemStyle: { color: '#E6A23C' },
+                                areaStyle: {
+                                    color: {
+                                        type: 'linear',
+                                        x: 0, y: 0, x2: 0, y2: 1,
+                                        colorStops: [
+                                            { offset: 0, color: 'rgba(230, 162, 60, 0.3)' },
+                                            { offset: 1, color: 'rgba(230, 162, 60, 0.05)' }
+                                        ]
+                                    }
+                                }
+                            },
+                            {
+                                name: '利润',
+                                type: 'line',
+                                smooth: true,
+                                data: profitData,
+                                itemStyle: { color: '#67C23A' },
+                                areaStyle: {
+                                    color: {
+                                        type: 'linear',
+                                        x: 0, y: 0, x2: 0, y2: 1,
+                                        colorStops: [
+                                            { offset: 0, color: 'rgba(103, 194, 58, 0.3)' },
+                                            { offset: 1, color: 'rgba(103, 194, 58, 0.05)' }
+                                        ]
+                                    }
+                                }
+                            }
+                        ]
+                    };
+                    this.trendChart.setOption(option);
+                }
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>型号管理 - 二手手机ERP管理系统</title>
+    <link rel="stylesheet" href="style/css/element-ui.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background-color: #f5f7fa;
+            padding: 20px;
+        }
+        .model-container {
+            max-width: 1500px;
+            margin: 0 auto;
+        }
+        .page-header {
+            text-align: center;
+            color: #409EFF;
+            margin-bottom: 30px;
+            font-size: 28px;
+            font-weight: 600;
+            background: linear-gradient(135deg, #409EFF, #79bbff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .table-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 25px;
+            border-radius: 12px;
+            border: 1px solid rgba(64, 158, 255, 0.2);
+            box-shadow: 0 4px 20px rgba(64, 158, 255, 0.1);
+        }
+        .operation-bar {
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .table-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #409EFF;
+            position: relative;
+            padding-left: 15px;
+        }
+        .table-title::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 4px;
+            height: 18px;
+            background: linear-gradient(180deg, #409EFF, #79bbff);
+            border-radius: 2px;
+        }
+        .el-table {
+            margin-bottom: 20px;
+        }
+        .el-table th {
+            background-color: #f5f7fa;
+            color: #606266;
+            font-weight: 600;
+        }
+        .el-table td {
+            padding: 12px 0;
+        }
+        .dialog-form {
+            width: 450px;
+        }
+        .el-input__inner{
+            width: auto;
+        }
+        .el-select {
+            width: 100%;
+        }
+        .statistics-bar {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(64, 158, 255, 0.2);
+            box-shadow: 0 4px 20px rgba(64, 158, 255, 0.1);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            text-align: center;
+        }
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: linear-gradient(180deg, #409EFF, #79bbff);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .stat-card:hover::before {
+            opacity: 1;
+        }
+        .stat-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(64, 158, 255, 0.4);
+            box-shadow: 0 8px 30px rgba(64, 158, 255, 0.2);
+        }
+        .stat-card .label {
+            color: #909399;
+            font-size: 14px;
+            margin-bottom: 10px;
+            font-weight: 500;
+        }
+        .stat-card .value {
+            font-size: 28px;
+            font-weight: bold;
+            background: linear-gradient(135deg, #409EFF, #79bbff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: 1px;
+        }
+        .filter-bar {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .filter-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .model-container{
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="model-container" :style="wait">
+            <h1 class="page-header">型号管理</h1>
+            
+            <!-- 统计卡片 -->
+            <div class="statistics-bar">
+                <div class="stat-card">
+                    <div class="label">型号总数</div>
+                    <div class="value">{{ statistics.totalCount }}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">正常型号</div>
+                    <div class="value">{{ statistics.activeCount }}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">品牌数量</div>
+                    <div class="value">{{ statistics.brandCount }}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">系列数量</div>
+                    <div class="value">{{ statistics.seriesCount }}</div>
+                </div>
+            </div>
+            
+            <div class="table-container">
+                <!-- 筛选栏 -->
+                <div class="filter-bar">
+                    <div class="filter-item">
+                        <el-select v-model="filterForm.brand" placeholder="品牌" clearable filterable @change="applyFilter">
+                            <el-option v-for="brand in brands" :key="brand" :label="brand" :value="brand"></el-option>
+                        </el-select>
+                    </div>
+                    <div class="filter-item">
+                        <el-button type="primary" @click="applyFilter">筛选</el-button>
+                        <el-button @click="resetFilter">重置</el-button>
+                    </div>
+                </div>
+                
+                <div class="operation-bar">
+                    <h3 class="table-title">型号列表</h3>
+                    <el-button type="primary" @click="openAddModelDialog">添加型号</el-button>
+                </div>
+                <el-table :data="filteredTypes.length ? filteredTypes : types" stripe>
+                    <el-table-column prop="brand" label="品牌" width="150"></el-table-column>
+                    <el-table-column prop="series" label="系列" width="150"></el-table-column>
+                    <el-table-column prop="model" label="型号"></el-table-column>
+                    <el-table-column prop="state" label="状态" width="100">
+                        <template slot-scope="scope">
+                            <el-tag :type="scope.row.state === 1 ? 'success' : 'info'" size="small">
+                                {{ scope.row.state === 1 ? '正常' : '关闭' }}
+                            </el-tag>
+                        </template>
+                    </el-table-column>
+                    <el-table-column label="操作" width="150" fixed="right">
+                        <template slot-scope="scope">
+                            <el-button size="small" type="primary" @click="openEditModelDialog(scope.row)">编辑</el-button>
+                            <el-button size="small" type="danger" @click="deleteModel(scope.row.tid)">删除</el-button>
+                        </template>
+                    </el-table-column>
+                </el-table>
+            </div>
+        </div>
+        
+        <!-- 添加型号对话框 -->
+        <el-dialog title="添加型号" :visible.sync="addModelDialogVisible" width="400px">
+            <el-form :model="modelForm" label-width="120px" class="dialog-form">
+                <el-form-item label="品牌">
+                    <el-select v-model="modelForm.brand" placeholder="请选择品牌" filterable allow-create @change="handleBrandChange">
+                        <el-option v-for="brand in brands" :key="brand" :label="brand" :value="brand"></el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="系列">
+                    <el-select v-model="modelForm.series" placeholder="请选择系列" filterable allow-create>
+                        <el-option v-for="series in seriesList" :key="series" :label="series" :value="series"></el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="型号">
+                    <el-input v-model="modelForm.model"></el-input>
+                </el-form-item>
+                <el-form-item label="状态">
+                    <el-select v-model="modelForm.state" placeholder="请选择状态">
+                        <el-option label="正常" value="1"></el-option>
+                        <el-option label="关闭" value="0"></el-option>
+                    </el-select>
+                </el-form-item>
+            </el-form>
+            <span slot="footer" class="dialog-footer">
+                <el-button @click="addModelDialogVisible = false">取消</el-button>
+                <el-button type="primary" @click="addModel">确定</el-button>
+            </span>
+        </el-dialog>
+        
+        <!-- 编辑型号对话框 -->
+        <el-dialog title="编辑型号" :visible.sync="editModelDialogVisible" width="400px">
+            <el-form :model="modelForm" label-width="120px" class="dialog-form">
+                <el-form-item label="品牌">
+                    <el-select v-model="modelForm.brand" placeholder="请选择品牌" filterable allow-create @change="handleEditBrandChange">
+                        <el-option v-for="brand in brands" :key="brand" :label="brand" :value="brand"></el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="系列">
+                    <el-select v-model="modelForm.series" placeholder="请选择系列" filterable allow-create>
+                        <el-option v-for="series in seriesList" :key="series" :label="series" :value="series"></el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="型号">
+                    <el-input v-model="modelForm.model"></el-input>
+                </el-form-item>
+                <el-form-item label="状态">
+                    <el-select v-model="modelForm.state" placeholder="请选择状态">
+                        <el-option label="正常" value="1"></el-option>
+                        <el-option label="关闭" value="0"></el-option>
+                    </el-select>
+                </el-form-item>
+            </el-form>
+            <span slot="footer" class="dialog-footer">
+                <el-button @click="editModelDialogVisible = false">取消</el-button>
+                <el-button type="primary" @click="updateModel">确定</el-button>
+            </span>
+        </el-dialog>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="style/js/vue.min.js"></script>
+    <script src="style/js/element-ui.js"></script>
+    <script src="style/js/axios.min.js"></script>
+    <script>
+        new Vue({
+            el: '#app',
+            data() {
+                return {
+                    wait:'display:block;',
+                    types: [],
+                    addModelDialogVisible: false,
+                    editModelDialogVisible: false,
+                    modelForm: {
+                        tid: '',
+                        brand: '',
+                        series: '',
+                        model: '',
+                        state: 1
+                    },
+                    // 品牌和系列数据
+                    brands: [],
+                    seriesList: [],
+                    // 统计数据
+                    statistics: {
+                        totalCount: 0,
+                        activeCount: 0,
+                        brandCount: 0,
+                        seriesCount: 0
+                    },
+                    // 筛选
+                    filterForm: {
+                        brand: '',
+                        series: ''
+                    },
+                    filteredTypes: []
+                };
+            },
+            mounted() {
+                this.fetchTypes();
+                this.fetchSystemConfig();
+                this.fetchStatistics();
+            },
+            watch: {
+                'modelForm.brand': function(newBrand) {
+                    // 当品牌变化时，更新系列列表
+                    this.updateSeriesList(newBrand);
+                }
+            },
+            methods: {
+                // 获取统计数据
+                fetchStatistics() {
+                    axios.post('/API/types.php', {
+                        action: 'statistics',
+                        token: localStorage.getItem('token')
+                    })
+                    .then(response => {
+                        if (response.data.code === 200) {
+                            this.statistics = response.data.data;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('获取统计数据失败:', error);
+                    });
+                },
+                // 应用筛选
+                applyFilter() {
+                    this.filteredTypes = this.types.filter(item => {
+                        if (this.filterForm.brand && item.brand !== this.filterForm.brand) {
+                            return false;
+                        }
+                        if (this.filterForm.series && item.series !== this.filterForm.series) {
+                            return false;
+                        }
+                        return true;
+                    });
+                },
+                // 重置筛选
+                resetFilter() {
+                    this.filterForm.brand = '';
+                    this.filterForm.series = '';
+                    this.filteredTypes = this.types;
+                },
+                fetchTypes() {
+                    axios.post('/API/types.php', {
+                        action: 'get',
+                        token: localStorage.getItem('token')
+                    })
+                    .then(response => {
+                        if (response.data.code === 200) {
+                            this.types = response.data.data;
+                        } else {
+                            this.$message.error(response.data.msg);
+                        }
+                    })
+                    .catch(error => {
+                        this.$message.error('获取型号列表失败');
+                        console.error(error);
+                    });
+                },
+                // 获取系统配置
+                fetchSystemConfig() {
+                    axios.post('/API/system.php', {
+                        action: 'get',
+                        token: localStorage.getItem('token')
+                    })
+                    .then(response => {
+                        if (response.data.code === 200) {
+                            const config = response.data.data;
+                            if (config.brand_system) {
+                                try {
+                                    const brandData = JSON.parse(config.brand_system);
+                                    this.brands = brandData.brand.map(item => {
+                                        const brand = Object.keys(item)[0];
+                                        return brand;
+                                    });
+                                } catch (e) {
+                                    console.error('解析品牌配置失败:', e);
+                                }
+                            }
+                        } else {
+                            this.$message.error(response.data.msg);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('获取系统配置失败:', error);
+                    });
+                },
+                // 更新系列列表
+                updateSeriesList(brand) {
+                    this.seriesList = [];
+                    if (!brand) return;
+                    
+                    axios.post('/API/system.php', {
+                        action: 'get',
+                        token: localStorage.getItem('token')
+                    })
+                    .then(response => {
+                        if (response.data.code === 200) {
+                            const config = response.data.data;
+                            if (config.brand_system) {
+                                try {
+                                    const brandData = JSON.parse(config.brand_system);
+                                    const brandItem = brandData.brand.find(item => Object.keys(item)[0] === brand);
+                                    if (brandItem) {
+                                        this.seriesList = brandItem[brand];
+                                    }
+                                } catch (e) {
+                                    console.error('解析品牌配置失败:', e);
+                                }
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('获取系统配置失败:', error);
+                    });
+                },
+                // 添加时品牌变更
+                handleBrandChange(brand) {
+                    this.updateSeriesList(brand);
+                    this.modelForm.series = '';
+                },
+                // 编辑时品牌变更
+                handleEditBrandChange(brand) {
+                    this.updateSeriesList(brand);
+                    this.modelForm.series = '';
+                },
+                openAddModelDialog() {
+                    this.modelForm = {
+                        tid: '',
+                        brand: '',
+                        series: '',
+                        model: '',
+                        state: 1
+                    };
+                    this.seriesList = [];
+                    this.addModelDialogVisible = true;
+                },
+                addModel() {
+                    axios.post('/API/types.php', {
+                        action: 'add',
+                        token: localStorage.getItem('token'),
+                        brand: this.modelForm.brand,
+                        series: this.modelForm.series,
+                        model: this.modelForm.model,
+                        state: this.modelForm.state
+                    })
+                    .then(response => {
+                        if (response.data.code === 200) {
+                            this.$message.success(response.data.msg);
+                            this.addModelDialogVisible = false;
+                            this.fetchTypes();
+                            this.fetchStatistics();
+                            this.resetFilter();
+                        } else {
+                            this.$message.error(response.data.msg);
+                        }
+                    })
+                    .catch(error => {
+                        this.$message.error('添加型号失败');
+                        console.error(error);
+                    });
+                },
+                openEditModelDialog(row) {
+                    this.modelForm = JSON.parse(JSON.stringify(row));
+                    // 加载系列列表
+                    this.updateSeriesList(row.brand);
+                    this.editModelDialogVisible = true;
+                },
+                updateModel() {
+                    axios.post('/API/types.php', {
+                        action: 'update',
+                        token: localStorage.getItem('token'),
+                        tid: this.modelForm.tid,
+                        brand: this.modelForm.brand,
+                        series: this.modelForm.series,
+                        model: this.modelForm.model,
+                        state: this.modelForm.state
+                    })
+                    .then(response => {
+                        if (response.data.code === 200) {
+                            this.$message.success(response.data.msg);
+                            this.editModelDialogVisible = false;
+                            this.fetchTypes();
+                            this.fetchStatistics();
+                            this.applyFilter();
+                        } else {
+                            this.$message.error(response.data.msg);
+                        }
+                    })
+                    .catch(error => {
+                        this.$message.error('更新型号失败');
+                        console.error(error);
+                    });
+                },
+                deleteModel(tid) {
+                    this.$confirm('确定要删除这个型号吗？', '提示', {
+                        confirmButtonText: '确定',
+                        cancelButtonText: '取消',
+                        type: 'warning'
+                    })
+                    .then(() => {
+                        axios.post('/API/types.php', {
+                            action: 'delete',
+                            token: localStorage.getItem('token'),
+                            tid: tid
+                        })
+                        .then(response => {
+                            if (response.data.code === 200) {
+                                this.$message.success(response.data.msg);
+                                this.fetchTypes();
+                                this.fetchStatistics();
+                                this.applyFilter();
+                            } else {
+                                this.$message.error(response.data.msg);
+                            }
+                        })
+                        .catch(error => {
+                            this.$message.error('删除型号失败');
+                            console.error(error);
+                        });
+                    })
+                    .catch(() => {
+                        this.$message.info('已取消删除');
+                    });
+                }
+            }
+        });
+    </script>
+</body>
+</html>

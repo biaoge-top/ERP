@@ -1,0 +1,1343 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>快递管理</title>
+    <link rel="stylesheet" href="style/css/element-ui.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+        .app-container {
+            width: 95%;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #409EFF;
+        }
+        .filter-bar {
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .el-table {
+            margin-bottom: 20px;
+        }
+        .stats-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 25px;
+            border-radius: 12px;
+            border: 1px solid rgba(64, 158, 255, 0.2);
+            box-shadow: 0 4px 20px rgba(64, 158, 255, 0.1);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            text-align: center;
+        }
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: linear-gradient(180deg, #409EFF, #79bbff);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .stat-card:hover::before {
+            opacity: 1;
+        }
+        .stat-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(64, 158, 255, 0.4);
+            box-shadow: 0 8px 30px rgba(64, 158, 255, 0.2);
+        }
+        .stat-card .label {
+            color: #909399;
+            font-size: 14px;
+            margin-bottom: 12px;
+            font-weight: 500;
+        }
+        .stat-card .value {
+            font-size: 32px;
+            font-weight: bold;
+            background: linear-gradient(135deg, #409EFF, #79bbff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: 1px;
+        }
+        
+        /* 快递轨迹弹窗样式 */
+        .tracking-info {
+            padding: 10px;
+        }
+        
+        .tracking-header {
+            background: #f5f7fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .tracking-item {
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .tracking-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .tracking-item .label {
+            font-weight: bold;
+            color: #606266;
+            width: 100px;
+            flex-shrink: 0;
+        }
+        
+        .tracking-item .value {
+            color: #303133;
+            flex: 1;
+        }
+        
+        .tracking-timeline {
+            position: relative;
+            padding-left: 30px;
+        }
+        
+        .timeline-item {
+            position: relative;
+            padding-bottom: 20px;
+            border-left: 2px solid #e4e7ed;
+        }
+        
+        .timeline-item:last-child {
+            padding-bottom: 0;
+            border-left: none;
+        }
+        
+        .timeline-dot {
+            position: absolute;
+            left: -6px;
+            top: 0;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #909399;
+            border: 2px solid #fff;
+        }
+        
+        .timeline-dot.active {
+            background: #409EFF;
+            width: 12px;
+            height: 12px;
+            left: -7px;
+            box-shadow: 0 0 8px rgba(64, 158, 255, 0.5);
+        }
+        
+        .timeline-content {
+            background: #f5f7fa;
+            padding: 12px 15px;
+            border-radius: 6px;
+            margin-left: 15px;
+        }
+        
+        .timeline-time {
+            font-size: 12px;
+            color: #909399;
+            margin-bottom: 6px;
+        }
+        
+        .timeline-text {
+            font-size: 14px;
+            color: #303133;
+            line-height: 1.6;
+        }
+        
+        .no-data {
+            text-align: center;
+            padding: 40px 0;
+            color: #909399;
+            font-size: 14px;
+        }
+        .el-tag{
+            height: auto;
+            line-height: 24px;
+        }
+        .el-dialog__body{
+            padding-top: 10px;
+        }
+        .el-form-item {
+             margin-bottom: 8px; 
+        }
+        .app-container{
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="app-container" :style="wait">
+            <div class="header">
+                <h1>快递管理</h1>
+            </div>
+            
+            <div class="stats-cards">
+                <div class="stat-card total">
+                    <div class="label">总快递数</div>
+                    <div class="value">{{ stats.totalCount }}</div>
+                </div>
+                <div class="stat-card amount">
+                    <div class="label">总快递金额</div>
+                    <div class="value">{{ stats.totalAmount | currency }}</div>
+                </div>
+                <div class="stat-card month">
+                    <div class="label">本月快递数</div>
+                    <div class="value">{{ stats.monthCount }}</div>
+                </div>
+                <div class="stat-card month">
+                    <div class="label">本月快递金额</div>
+                    <div class="value">{{ stats.monthAmount | currency }}</div>
+                </div>
+                <div class="stat-card type1">
+                    <div class="label">采购快递</div>
+                    <div class="value">{{ stats.purchaseCount }}</div>
+                </div>
+                <div class="stat-card type2">
+                    <div class="label">销售快递</div>
+                    <div class="value">{{ stats.salesCount }}</div>
+                </div>
+                <div class="stat-card type3">
+                    <div class="label">售后(回发)</div>
+                    <div class="value">{{ stats.afterSalesBackCount+stats.afterSalesSendCount }}</div>
+                </div>
+            </div>
+            <div class="filter-bar">
+                <el-button type="primary" @click="openAddDialog">添加快递</el-button>
+                <el-button type="info" @click="filterByType('采购')">采购</el-button>
+                <el-button type="success" @click="filterByType('销售')">销售</el-button>
+                <el-input placeholder="搜索快递单号" v-model="searchQuery" style="width:300px; margin-left: 10px;float: right;" clearable>
+                    <el-button slot="append" icon="el-icon-search" @click="search"></el-button>
+                </el-input>
+            </div>
+            <div class="filter-bar">
+                <el-select v-model="filterForm.express_type" placeholder="快递类型" clearable style="width: 120px; margin-left: 10px;">
+                    <el-option label="采购" value="采购"></el-option>
+                    <el-option label="销售" value="销售"></el-option>
+                    <el-option label="售后(回)" value="售后(回)"></el-option>
+                    <el-option label="售后(发)" value="售后(发)"></el-option>
+                </el-select>
+                <el-select v-model="filterForm.courier_company" placeholder="快递公司" clearable filterable allow-create style="width: 120px; margin-left: 10px;">
+                    <el-option v-for="company in expressCompanyList" :key="company" :label="company" :value="company"></el-option>
+                </el-select>
+                <el-date-picker
+                    v-model="dateRange"
+                    type="daterange"
+                    range-separator="至"
+                    start-placeholder="开始日期"
+                    end-placeholder="结束日期"
+                    value-format="yyyy-MM-dd"
+                    @change="handleDateChange"
+                    style="margin-left: 10px;"
+                ></el-date-picker>
+                <el-button type="primary" @click="applyFilter" style="margin-left: 10px;">筛选</el-button>
+                <el-button @click="resetFilter">重置</el-button>
+            </div>
+            
+            <el-table :data="expressList" stripe show-summary :summary-method="getSummaries">
+                <el-table-column prop="express_id" label="ID" width="80"></el-table-column>
+                <el-table-column prop="machine_code" label="机器编码"></el-table-column>
+                <el-table-column label="型号" >
+                    <template slot-scope="scope">
+                        <span>{{ scope.row.brand }} {{ scope.row.series }} {{ scope.row.model }}</span>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="express_type" label="快递类型" >
+                    <template slot-scope="scope">
+                        <el-tag v-if="scope.row.express_type === '采购'" type="primary">{{ scope.row.express_type }}</el-tag>
+                        <el-tag v-else-if="scope.row.express_type === '销售'" type="success">{{ scope.row.express_type }}</el-tag>
+                        <el-tag v-else-if="scope.row.express_type === '售后(回)'" type="warning">{{ scope.row.express_type }}</el-tag>
+                        <el-tag v-else-if="scope.row.express_type === '售后(发)'" type="danger">{{ scope.row.express_type }}</el-tag>
+                        <span v-else>{{ scope.row.express_type }}</span>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="courier_company" label="快递公司" ></el-table-column>
+                <el-table-column prop="tracking_id" label="快递单号" width="200" >
+                    <template slot-scope="scope" style="display: flex; align-items: center;">
+                        <el-tag 
+                            v-if="scope.row.tracking_id" 
+                            @click.native="copyTrackingId(scope.row.tracking_id)" 
+                            style="cursor: pointer;"
+                            title="点击复制">
+                            {{ scope.row.tracking_id }}
+                        </el-tag>
+                        <el-tag type="info" @click="viewTrackingDetail(scope.row)">查看</el-tag>
+                        <span v-else>-</span>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="postage" label="邮费" >
+                    <template slot-scope="scope">
+                        <span>{{ scope.row.postage | currency }}</span>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="delivery_time" label="发货时间" width="120"></el-table-column>
+                <el-table-column prop="delivery_address" label="收货地址" width="200">
+                    <template slot-scope="scope">
+                        <el-tag 
+                            v-if="scope.row.courier_address" 
+                            type="info" 
+                            @click="copyCourierAddress(scope.row.courier_address)"
+                            style="cursor: pointer; max-width: 180px; white-space: wrap; word-break: break-all; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; line-height: 1.5; height: auto;"
+                            :title="scope.row.courier_address">
+                            {{ scope.row.courier_address }}
+                        </el-tag>
+                        <span v-else>-</span>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="remark" label="备注" width="150"></el-table-column>
+                <el-table-column label="操作" width="100" fixed="right">
+                    <template slot-scope="scope">
+                        <el-button size="mini" type="primary" @click="openEditDialog(scope.row)">编辑</el-button>
+                        <el-button v-if="scope.row.express_type == '销售'&&!scope.row.tracking_id" size="mini" type="success" @click="deliverExpress(scope.row)">发货</el-button>
+                    </template>
+                </el-table-column>
+            </el-table>
+            
+            <el-pagination
+                @size-change="handleSizeChange"
+                @current-change="handleCurrentChange"
+                :current-page="currentPage"
+                :page-sizes="[20, 50, 80, 100]"
+                :page-size="pageSize"
+                layout="total, sizes, prev, pager, next, jumper"
+                :total="total">
+            </el-pagination>
+        </div>
+        
+        <el-dialog title="添加快递" :visible.sync="addDialogVisible" width="500px">
+            <el-form :model="addForm" label-width="100px">
+                <el-form-item label="手机状态">
+                    <el-select v-model="phoneStateFilter" placeholder="筛选手机状态" style="width: 100%;" @change="filterPhoneList">
+                        <el-option label="全部" :value="0"></el-option>
+                        <el-option label="采购中" :value="1"></el-option>
+                        <el-option label="待质检" :value="2"></el-option>
+                        <el-option label="待上架" :value="3"></el-option>
+                        <el-option label="在销售" :value="4"></el-option>
+                        <el-option label="已销售" :value="5"></el-option>
+                        <el-option label="在售后" :value="6"></el-option>
+                        <el-option label="已售后" :value="7"></el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="关联手机">
+                    <el-select v-model="addForm.wid" placeholder="选择手机" filterable style="width: 100%;">
+                        <el-option 
+                            v-for="phone in filteredPhoneList" 
+                            :key="phone.wid" 
+                            :label="phone.machine_code + ' - ' + phone.brand + ' ' + phone.series + phone.model + ' ' + phone.color + ' ' + phone.storage + ' ' + phone.remark" 
+                            :value="phone.wid">
+                        </el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="快递类型">
+                    <el-select v-model="addForm.express_type" placeholder="选择快递类型" style="width: 100%;">
+                        <el-option label="采购" value="采购"></el-option>
+                        <el-option label="销售" value="销售"></el-option>
+                        <el-option label="售后(回)" value="售后(回)"></el-option>
+                        <el-option label="售后(发)" value="售后(发)"></el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="收件地址">
+                    <el-input v-model="addForm.courier_address" type="textarea" :rows="3" placeholder="姓名 电话&#10;地址"></el-input>
+                </el-form-item>
+                <el-form-item label="快递公司">
+                    <el-select v-model="addForm.courier_company" placeholder="选择快递公司" filterable allow-create style="width: 100%;">
+                        <el-option v-for="company in expressCompanyList" :key="company" :label="company" :value="company"></el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="快递单号">
+                    <el-input v-model="addForm.tracking_id" placeholder="请输入快递单号"></el-input>
+                </el-form-item>
+                <el-form-item label="邮费">
+                    <el-input v-model.number="addForm.postage" type="number" placeholder="请输入邮费"></el-input>
+                </el-form-item>
+                <el-form-item label="发货时间">
+                    <el-date-picker v-model="addForm.delivery_time" type="date" placeholder="选择日期" value-format="yyyy-MM-dd" style="width: 100%;"></el-date-picker>
+                </el-form-item>
+                <el-form-item label="备注">
+                    <el-input v-model="addForm.remark" type="textarea" placeholder="请输入备注"></el-input>
+                </el-form-item>
+            </el-form>
+            <div slot="footer">
+                <el-button @click="addDialogVisible = false">取消</el-button>
+                <el-button type="primary" @click="addExpress">确定</el-button>
+            </div>
+        </el-dialog>
+        
+        <el-dialog title="编辑快递" :visible.sync="editDialogVisible" width="500px">
+            <el-form :model="editForm" label-width="100px">
+                <el-form-item label="手机状态">
+                    <el-select v-model="editPhoneStateFilter" placeholder="筛选手机状态" style="width: 100%;" @change="filterEditPhoneList">
+                        <el-option label="全部" :value="0"></el-option>
+                        <el-option label="采购中" :value="1"></el-option>
+                        <el-option label="待质检" :value="2"></el-option>
+                        <el-option label="待上架" :value="3"></el-option>
+                        <el-option label="在销售" :value="4"></el-option>
+                        <el-option label="已销售" :value="5"></el-option>
+                        <el-option label="在售后" :value="6"></el-option>
+                        <el-option label="已售后" :value="7"></el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="关联手机">
+                    <el-select v-model="editForm.wid" placeholder="选择手机" filterable style="width: 100%;">
+                        <el-option 
+                            v-for="phone in editFilteredPhoneList" 
+                            :key="phone.wid" 
+                            :label="phone.machine_code + ' - ' + phone.brand + ' ' + phone.series + ' ' + phone.model" 
+                            :value="phone.wid">
+                        </el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="快递类型">
+                    <el-select v-model="editForm.express_type" placeholder="选择快递类型" style="width: 100%;">
+                        <el-option label="采购" value="采购"></el-option>
+                        <el-option label="销售" value="销售"></el-option>
+                        <el-option label="售后(回)" value="售后(回)"></el-option>
+                        <el-option label="售后(发)" value="售后(发)"></el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="收件地址">
+                    <el-input v-model="editForm.courier_address" type="textarea" :rows="3" placeholder="姓名 电话&#10;地址"></el-input>
+                </el-form-item>
+                <el-form-item label="快递公司">
+                    <el-select v-model="editForm.courier_company" placeholder="选择快递公司" filterable allow-create style="width: 100%;">
+                        <el-option v-for="company in expressCompanyList" :key="company" :label="company" :value="company"></el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="快递单号">
+                    <el-input v-model="editForm.tracking_id" placeholder="请输入快递单号"></el-input>
+                </el-form-item>
+                <el-form-item label="邮费">
+                    <el-input v-model.number="editForm.postage" type="number" placeholder="请输入邮费"></el-input>
+                </el-form-item>
+                <el-form-item label="发货时间">
+                    <el-date-picker v-model="editForm.delivery_time" type="date" placeholder="选择日期" value-format="yyyy-MM-dd" style="width: 100%;"></el-date-picker>
+                </el-form-item>
+                <el-form-item label="备注">
+                    <el-input v-model="editForm.remark" type="textarea" placeholder="请输入备注"></el-input>
+                </el-form-item>
+            </el-form>
+            <div slot="footer" style="display: flex; justify-content: space-between;">
+                <el-button type="danger" @click="deleteExpress(editForm.express_id)">删除</el-button>
+                <div>
+                    <el-button @click="editDialogVisible = false">取消</el-button>
+                    <el-button type="primary" @click="updateExpress">确定</el-button>
+                </div>
+            </div>
+        </el-dialog>
+        
+        <!-- 快递轨迹查询弹窗 -->
+        <el-dialog title="快递物流轨迹" :visible.sync="trackingDialogVisible" width="700px" top="5vh">
+            <div v-loading="trackingLoading" element-loading-text="正在查询物流信息...">
+                <div v-if="trackingData" class="tracking-info">
+                    <div class="tracking-header">
+                        <div class="tracking-item">
+                            <span class="label">快递单号：</span>
+                            <span class="value">{{ trackingData.tracking_number }}</span>
+                            <el-button type="primary" size="mini" @click="copyTrackingIdFromDialog">复制</el-button>
+                        </div>
+                        <div class="tracking-item">
+                            <span class="label">快递公司：</span>
+                            <span class="value">{{ trackingData.carrier_name }}</span>
+                        </div>
+                        <div class="tracking-item">
+                            <span class="label">物流状态：</span>
+                            <el-tag :type="getTrackingStatusType(trackingData.status)" size="small">
+                                {{ trackingData.status_text || '运输中' }}
+                            </el-tag>
+                        </div>
+                        <div class="tracking-item" v-if="currentRow && currentRow.courier_address">
+                            <span class="label">收货信息：</span>
+                            <span class="value">{{ currentRow.courier_address }}</span>
+                            <el-button type="primary" size="mini" @click="copyRecInfoFromDialog">复制</el-button>
+                        </div>
+                    </div>
+                    
+                    <div class="tracking-timeline">
+                        <div v-for="(track, index) in trackingData.tracks" :key="index" class="timeline-item">
+                            <div class="timeline-dot" :class="{ active: index === 0 }"></div>
+                            <div class="timeline-content">
+                                <div class="timeline-time">{{ track.time }}</div>
+                                <div class="timeline-text" v-html="track.context"></div>
+                            </div>
+                        </div>
+                        <div v-if="trackingData.tracks && trackingData.tracks.length === 0" class="no-data">
+                            暂无物流信息
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div slot="footer">
+                <el-button @click="trackingDialogVisible = false">关闭</el-button>
+            </div>
+        </el-dialog>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="style/js/vue.min.js"></script>
+    <script src="style/js/element-ui.js"></script>
+    <script src="style/js/axios.min.js"></script>
+    <script>
+        new Vue({
+            el: '#app',
+            data() {
+                return {
+                    wait:'display:block;',
+                    expressList: [],
+                    phoneList: [],
+                    filteredPhoneList: [],
+                    editFilteredPhoneList: [],
+                    phoneStateFilter: 4,
+                    editPhoneStateFilter: 0,
+                    currentPage: 1,
+                    pageSize: 20,
+                    total: 0,
+                    searchQuery: '',
+                    dateRange: [],
+                    filterForm: {
+                        express_type: '',
+                        courier_company: '',
+                        startDate: '',
+                        endDate: ''
+                    },
+                    stats: {
+                        totalCount: 0,
+                        totalAmount: 0,
+                        monthCount: 0,
+                        monthAmount: 0,
+                        purchaseCount: 0,
+                        salesCount: 0,
+                        afterSalesBackCount: 0,
+                        afterSalesSendCount: 0
+                    },
+                    expressCompanyList: [],
+                    addDialogVisible: false,
+                    editDialogVisible: false,
+                    addForm: {
+                        wid: '',
+                        express_type: '',
+                        courier_company: '',
+                        tracking_id: '',
+                        postage: 0,
+                        delivery_time: '',
+                        courier_address: '',
+                        remark: ''
+                    },
+                    editForm: {
+                        express_id: '',
+                        wid: '',
+                        express_type: '',
+                        courier_company: '',
+                        tracking_id: '',
+                        postage: 0,
+                        delivery_time: '',
+                        courier_address: '',
+                        remark: ''
+                    },
+                    // 快递轨迹查询
+                    trackingDialogVisible: false,
+                    trackingLoading: false,
+                    trackingData: null,
+                    currentTrackingId: '',
+                    currentRow: null // 当前选中的快递记录
+                };
+            },
+            filters: {
+                currency(value) {
+                    if (value === null || value === undefined) return '0.00';
+                    return parseFloat(value).toFixed(2);
+                }
+            },
+            mounted() {
+                this.fetchExpressList();
+                this.fetchPhoneList();
+                this.fetchSystemConfig();
+            },
+            methods: {
+                fetchExpressList() {
+                    axios.post('/API/express.php', {
+                        action: 'get',
+                        token: localStorage.getItem('token'),
+                        tracking_id: this.searchQuery,
+                        express_type: this.filterForm.express_type,
+                        courier_company: this.filterForm.courier_company,
+                        startDate: this.filterForm.startDate,
+                        endDate: this.filterForm.endDate
+                    })
+                    .then(response => {
+                        if (response.data.code === 200) {
+                            this.expressList = response.data.data;
+                            this.total = response.data.data.length;
+                            this.calculateStats();
+                        } else {
+                            this.$message.error(response.data.msg);
+                        }
+                    })
+                    .catch(error => {
+                        this.$message.error('获取数据失败');
+                        console.error(error);
+                    });
+                },
+                fetchPhoneList() {
+                    axios.post('/API/phone.php', {
+                        action: 'get',
+                        token: localStorage.getItem('token')
+                    })
+                    .then(response => {
+                        if (response.data.code === 200) {
+                            this.phoneList = response.data.data;
+                            this.filterPhoneList();
+                        }
+                    })
+                    .catch(error => {
+                        console.error('获取手机列表失败:', error);
+                    });
+                },
+                filterPhoneList() {
+                    if (this.phoneStateFilter === 0) {
+                        this.filteredPhoneList = this.phoneList;
+                    } else {
+                        this.filteredPhoneList = this.phoneList.filter(phone => phone.state === this.phoneStateFilter);
+                    }
+                },
+                filterEditPhoneList() {
+                    if (this.editPhoneStateFilter === 0) {
+                        this.editFilteredPhoneList = this.phoneList;
+                    } else {
+                        this.editFilteredPhoneList = this.phoneList.filter(phone => phone.state === this.editPhoneStateFilter);
+                    }
+                },
+                fetchSystemConfig() {
+                    axios.post('/API/system.php', {
+                        action: 'get',
+                        token: localStorage.getItem('token')
+                    })
+                    .then(response => {
+                        if (response.data.code === 200) {
+                            const config = response.data.data;
+                            if (config.express_system) {
+                                try {
+                                    const expressData = JSON.parse(config.express_system);
+                                    this.expressCompanyList = expressData.express || [];
+                                } catch (e) {
+                                    console.error('解析快递配置失败:', e);
+                                }
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('获取系统配置失败:', error);
+                    });
+                },
+                calculateStats() {
+                    const now = new Date();
+                    const currentMonth = now.getMonth() + 1;
+                    const currentYear = now.getFullYear();
+                    
+                    let totalCount = 0;
+                    let totalAmount = 0;
+                    let monthCount = 0;
+                    let monthAmount = 0;
+                    let purchaseCount = 0;
+                    let salesCount = 0;
+                    let afterSalesBackCount = 0;
+                    let afterSalesSendCount = 0;
+                    
+                    this.expressList.forEach(item => {
+                        totalCount++;
+                        totalAmount += parseFloat(item.postage) || 0;
+                        
+                        if (item.delivery_time) {
+                            const date = new Date(item.delivery_time);
+                            if (date.getMonth() + 1 === currentMonth && date.getFullYear() === currentYear) {
+                                monthCount++;
+                                monthAmount += parseFloat(item.postage) || 0;
+                            }
+                        }
+                        
+                        switch(item.express_type) {
+                            case '采购':
+                                purchaseCount++;
+                                break;
+                            case '销售':
+                                salesCount++;
+                                break;
+                            case '售后(回)':
+                                afterSalesBackCount++;
+                                break;
+                            case '售后(发)':
+                                afterSalesSendCount++;
+                                break;
+                        }
+                    });
+                    
+                    this.stats = {
+                        totalCount,
+                        totalAmount,
+                        monthCount,
+                        monthAmount,
+                        purchaseCount,
+                        salesCount,
+                        afterSalesBackCount,
+                        afterSalesSendCount
+                    };
+                },
+                handleDateChange(val) {
+                    if (val) {
+                        this.filterForm.startDate = val[0];
+                        this.filterForm.endDate = val[1];
+                    } else {
+                        this.filterForm.startDate = '';
+                        this.filterForm.endDate = '';
+                    }
+                },
+                // 按类型筛选
+                filterByType(expressType) {
+                    this.filterForm.express_type = expressType;
+                    this.searchQuery = '';
+                    this.dateRange = [];
+                    this.filterForm.startDate = '';
+                    this.filterForm.endDate = '';
+                    this.currentPage = 1;
+                    this.fetchExpressList();
+                },
+                // 复制快递单号
+                copyTrackingId(trackingId) {
+                    if (!trackingId) {
+                        this.$message.warning('快递单号为空');
+                        return;
+                    }
+                    
+                    // 使用现代 Clipboard API
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(trackingId).then(() => {
+                            this.$message.success('快递单号已复制：' + trackingId);
+                        }).catch(err => {
+                            this.fallbackCopyText(trackingId);
+                        });
+                    } else {
+                        // 降级方案
+                        this.fallbackCopyText(trackingId);
+                    }
+                },
+                // 降级复制方法
+                fallbackCopyText(text) {
+                    const textArea = document.createElement('textarea');
+                    textArea.value = text;
+                    textArea.style.position = 'fixed';
+                    textArea.style.top = '0';
+                    textArea.style.left = '0';
+                    textArea.style.width = '2em';
+                    textArea.style.height = '2em';
+                    textArea.style.padding = '0';
+                    textArea.style.border = 'none';
+                    textArea.style.outline = 'none';
+                    textArea.style.boxShadow = 'none';
+                    textArea.style.background = 'transparent';
+                    textArea.style.opacity = '0';
+                    
+                    document.body.appendChild(textArea);
+                    textArea.focus();
+                    textArea.select();
+                    
+                    try {
+                        const successful = document.execCommand('copy');
+                        if (successful) {
+                            this.$message.success('快递单号已复制：' + text);
+                        } else {
+                            this.$message.error('复制失败');
+                        }
+                    } catch (err) {
+                        this.$message.error('复制失败，请手动复制');
+                    } finally {
+                        document.body.removeChild(textArea);
+                    }
+                },
+                // 查看快递轨迹
+                viewTrackingDetail(row) {
+                    if (!row.tracking_id) {
+                        this.$message.warning('快递单号为空');
+                        return;
+                    }
+                    if (row.courier_company == '顺丰速运') {
+                        this.$message.warning('顺丰速运不支持查询轨迹');
+                        this.currentTrackingId = row.tracking_id;
+                        this.currentRow = row; // 保存当前行数据
+                        this.trackingDialogVisible = true;
+                        this.trackingData = {
+                            "tracking_number": row.tracking_id,
+                            "carrier_code": row.courier_company,
+                            "carrier_name": row.courier_company,
+                            "status": 'success',
+                            "status_text": '运输中',
+                            "tracks": [
+                                {
+                                    "time": new Date().toLocaleString(),
+                                    "context": "顺丰速运快递暂时不支持查询轨迹，如需查询请访问顺丰速运官网：<a href='https://www.sf-express.com/chn/sc/waybill/waybill-detail/" + row.tracking_id + "' target='_blank'>https://www.sf-express.com/chn/sc/waybill/waybill-detail/" + row.tracking_id + "</a>"
+                                }
+                            ]
+                        };
+                        return;
+                    }
+                    this.currentTrackingId = row.tracking_id;
+                    this.currentRow = row; // 保存当前行数据
+                    this.trackingDialogVisible = true;
+                    this.queryTracking(row.tracking_id, row.courier_company);
+                },
+                // 查询快递轨迹
+                queryTracking(trackingId, courierCompany) {
+                    this.trackingLoading = true;
+                    
+                    // 使用 UAPI 快递查询接口
+                    const apiUrl = `https://uapis.cn/api/v1/misc/tracking/query?tracking_number=${encodeURIComponent(trackingId)}`;
+                    
+                    axios.get(apiUrl)
+                        .then(response => {
+                            const data = response.data;
+                            if (data.code === 200 || (data.tracking_number && data.tracks !== undefined)) {
+                                // 查询成功
+                                this.trackingData = {
+                                    tracking_number: data.tracking_number || trackingId,
+                                    carrier_code: data.carrier_code || '',
+                                    carrier_name: data.carrier_name || courierCompany || '未知快递',
+                                    status: 'success',
+                                    status_text: '运输中',
+                                    tracks: data.tracks || []
+                                };
+                            } else {
+                                // 查询失败
+                                this.$message.error(data.message || '查询失败，请检查快递单号是否正确');
+                                this.trackingData = null;
+                            }
+                        })
+                        .catch(error => {
+                            console.error('查询物流失败:', error);
+                            if (error.response && error.response.status === 404) {
+                                this.$message.warning('暂无物流信息，可能是刚发货或需要验证手机尾号');
+                            } else if (error.response && error.response.status === 400) {
+                                this.$message.error('快递单号格式错误');
+                            } else {
+                                this.$message.error('查询失败，请稍后重试');
+                            }
+                            this.trackingData = null;
+                        })
+                        .finally(() => {
+                            this.trackingLoading = false;
+                        });
+                },
+                // 刷新物流信息
+                refreshTracking() {
+                    if (this.currentTrackingId) {
+                        this.queryTracking(this.currentTrackingId, '');
+                    }
+                },
+                // 获取物流状态标签类型
+                getTrackingStatusType(status) {
+                    if (!status) return 'success';
+                    switch(status) {
+                        case 'success':
+                            return 'success';
+                        case 'warning':
+                            return 'warning';
+                        case 'danger':
+                            return 'danger';
+                        default:
+                            return 'info';
+                    }
+                },
+                // 从弹窗复制快递单号
+                copyTrackingIdFromDialog() {
+                    if (!this.trackingData || !this.trackingData.tracking_number) {
+                        this.$message.warning('快递单号为空');
+                        return;
+                    }
+                    
+                    const trackingId = this.trackingData.tracking_number;
+                    
+                    // 使用现代 Clipboard API
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(trackingId).then(() => {
+                            this.$message.success('快递单号已复制：' + trackingId);
+                        }).catch(err => {
+                            this.fallbackCopyText(trackingId);
+                        });
+                    } else {
+                        // 降级方案
+                        this.fallbackCopyText(trackingId);
+                    }
+                },
+                // 从编辑框复制快递单号
+                copyTrackingIdFromInput() {
+                    if (!this.editForm.tracking_id) {
+                        this.$message.warning('快递单号为空');
+                        return;
+                    }
+                    
+                    const trackingId = this.editForm.tracking_id;
+                    
+                    // 使用现代 Clipboard API
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(trackingId).then(() => {
+                            this.$message.success('快递单号已复制');
+                        }).catch(err => {
+                            this.fallbackCopyText(trackingId);
+                        });
+                    } else {
+                        // 降级方案
+                        this.fallbackCopyText(trackingId);
+                    }
+                },
+                // 粘贴快递单号
+                pasteTrackingId() {
+                    navigator.clipboard.readText().then(text => {
+                        if (text) {
+                            this.editForm.tracking_id = text.trim();
+                            this.$message.success('快递单号已粘贴');
+                        } else {
+                            this.$message.warning('剪贴板为空');
+                        }
+                    }).catch(err => {
+                        this.$message.error('读取剪贴板失败，请允许浏览器访问剪贴板');
+                        console.error('粘贴失败:', err);
+                    });
+                },
+                // 复制收件地址
+                copyAddress() {
+                    if (!this.editForm.courier_address) {
+                        this.$message.warning('收件地址为空');
+                        return;
+                    }
+                    
+                    const address = this.editForm.courier_address;
+                    
+                    // 使用现代 Clipboard API
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(address).then(() => {
+                            this.$message.success('收件地址已复制');
+                        }).catch(err => {
+                            this.fallbackCopyText(address);
+                        });
+                    } else {
+                        // 降级方案
+                        this.fallbackCopyText(address);
+                    }
+                },
+                // 粘贴收件地址
+                pasteAddress() {
+                    navigator.clipboard.readText().then(text => {
+                        if (text) {
+                            this.editForm.courier_address = text.trim();
+                            this.$message.success('收件地址已粘贴');
+                        } else {
+                            this.$message.warning('剪贴板为空');
+                        }
+                    }).catch(err => {
+                        this.$message.error('读取剪贴板失败，请允许浏览器访问剪贴板');
+                        console.error('粘贴失败:', err);
+                    });
+                },
+                // 清空收件地址
+                clearAddress() {
+                    this.editForm.courier_address = '';
+                    this.$message.success('收件地址已清空');
+                },
+                // 清空快递单号
+                clearTrackingId() {
+                    this.editForm.tracking_id = '';
+                    this.$message.success('快递单号已清空');
+                },
+                // 从弹窗复制收货信息
+                copyRecInfoFromDialog() {
+                    if (!this.currentRow || !this.currentRow.courier_address) {
+                        this.$message.warning('收货信息为空');
+                        return;
+                    }
+                    
+                    const recInfo = this.currentRow.courier_address;
+                    
+                    // 使用现代 Clipboard API
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(recInfo).then(() => {
+                            this.$message.success('收货信息已复制');
+                        }).catch(err => {
+                            this.fallbackCopyText(recInfo);
+                        });
+                    } else {
+                        // 降级方案
+                        this.fallbackCopyText(recInfo);
+                    }
+                },
+                // 从添加框复制收件地址
+                copyAddressFromAdd() {
+                    if (!this.addForm.courier_address) {
+                        this.$message.warning('收件地址为空');
+                        return;
+                    }
+                    
+                    const address = this.addForm.courier_address;
+                    
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(address).then(() => {
+                            this.$message.success('收件地址已复制');
+                        }).catch(err => {
+                            this.fallbackCopyText(address);
+                        });
+                    } else {
+                        this.fallbackCopyText(address);
+                    }
+                },
+                // 从添加框粘贴收件地址
+                pasteAddressFromAdd() {
+                    navigator.clipboard.readText().then(text => {
+                        if (text) {
+                            this.addForm.courier_address = text.trim();
+                            this.$message.success('收件地址已粘贴');
+                        } else {
+                            this.$message.warning('剪贴板为空');
+                        }
+                    }).catch(err => {
+                        this.$message.error('读取剪贴板失败，请允许浏览器访问剪贴板');
+                        console.error('粘贴失败:', err);
+                    });
+                },
+                // 从添加框清空收件地址
+                clearAddressFromAdd() {
+                    this.addForm.courier_address = '';
+                    this.$message.success('收件地址已清空');
+                },
+                // 从添加框复制快递单号
+                copyTrackingIdFromAdd() {
+                    if (!this.addForm.tracking_id) {
+                        this.$message.warning('快递单号为空');
+                        return;
+                    }
+                    
+                    const trackingId = this.addForm.tracking_id;
+                    
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(trackingId).then(() => {
+                            this.$message.success('快递单号已复制');
+                        }).catch(err => {
+                            this.fallbackCopyText(trackingId);
+                        });
+                    } else {
+                        this.fallbackCopyText(trackingId);
+                    }
+                },
+                // 从添加框粘贴快递单号
+                pasteTrackingIdFromAdd() {
+                    navigator.clipboard.readText().then(text => {
+                        if (text) {
+                            this.addForm.tracking_id = text.trim();
+                            this.$message.success('快递单号已粘贴');
+                        } else {
+                            this.$message.warning('剪贴板为空');
+                        }
+                    }).catch(err => {
+                        this.$message.error('读取剪贴板失败，请允许浏览器访问剪贴板');
+                        console.error('粘贴失败:', err);
+                    });
+                },
+                // 从添加框清空快递单号
+                clearTrackingIdFromAdd() {
+                    this.addForm.tracking_id = '';
+                    this.$message.success('快递单号已清空');
+                },
+                search() {
+                    this.fetchExpressList();
+                },
+                applyFilter() {
+                    this.currentPage = 1;
+                    this.fetchExpressList();
+                },
+                resetFilter() {
+                    this.filterForm = {
+                        express_type: '',
+                        courier_company: '',
+                        startDate: '',
+                        endDate: ''
+                    };
+                    this.dateRange = [];
+                    this.searchQuery = '';
+                    this.currentPage = 1;
+                    this.fetchExpressList();
+                },
+                handleSizeChange(size) {
+                    this.pageSize = size;
+                    this.currentPage = 1;
+                },
+                handleCurrentChange(current) {
+                    this.currentPage = current;
+                },
+                getSummaries(param) {
+                    const { columns, data } = param;
+                    const sums = [];
+                    columns.forEach((column, index) => {
+                        if (index === 0) {
+                            sums[index] = '合计';
+                            return;
+                        }
+                        if (column.property === 'postage') {
+                            const values = data.map(item => Number(item[column.property]));
+                            if (!values.every(value => isNaN(value))) {
+                                sums[index] = values.reduce((prev, curr) => {
+                                    const value = Number(curr);
+                                    if (!isNaN(value)) {
+                                        return prev + curr;
+                                    } else {
+                                        return prev;
+                                    }
+                                }, 0).toFixed(2);
+                            } else {
+                                sums[index] = '0.00';
+                            }
+                        } else {
+                            sums[index] = '';
+                        }
+                    });
+                    return sums;
+                },
+                openAddDialog() {
+                    const today = new Date();
+                    const year = today.getFullYear();
+                    const month = String(today.getMonth() + 1).padStart(2, '0');
+                    const day = String(today.getDate()).padStart(2, '0');
+                    const currentDate = `${year}-${month}-${day}`;
+                    
+                    this.addForm = {
+                        wid: '',
+                        express_type: '销售',
+                        courier_company: '顺丰速运',
+                        tracking_id: '',
+                        postage: 0,
+                        delivery_time: currentDate,
+                        courier_address: '',
+                        remark: ''
+                    };
+                    this.phoneStateFilter = 4;
+                    this.filterPhoneList();
+                    this.addDialogVisible = true;
+                },
+                addExpress() {
+                    if (!this.addForm.wid) {
+                        this.$message.warning('请选择关联手机');
+                        return;
+                    }
+                    if (!this.addForm.express_type) {
+                        this.$message.warning('请选择快递类型');
+                        return;
+                    }
+                    
+                    axios.post('/API/express.php', {
+                        action: 'add',
+                        token: localStorage.getItem('token'),
+                        wid: this.addForm.wid,
+                        express_type: this.addForm.express_type,
+                        courier_company: this.addForm.courier_company,
+                        tracking_id: this.addForm.tracking_id,
+                        postage: this.addForm.postage,
+                        delivery_time: this.addForm.delivery_time,
+                        courier_address: this.addForm.courier_address,
+                        remark: this.addForm.remark
+                    })
+                    .then(response => {
+                        if (response.data.code === 200) {
+                            this.$message.success('添加成功');
+                            this.addDialogVisible = false;
+                            this.fetchExpressList();
+                        } else {
+                            this.$message.error(response.data.msg);
+                        }
+                    })
+                    .catch(error => {
+                        this.$message.error('添加失败');
+                        console.error(error);
+                    });
+                },
+                openEditDialog(row) {
+                    this.editForm = {
+                        express_id: row.express_id,
+                        wid: row.wid,
+                        express_type: row.express_type,
+                        courier_company: row.courier_company,
+                        tracking_id: row.tracking_id,
+                        postage: row.postage,
+                        delivery_time: row.delivery_time,
+                        courier_address: row.courier_address,
+                        remark: row.remark
+                    };
+                    this.editPhoneStateFilter = 0;
+                    this.filterEditPhoneList();
+                    this.editDialogVisible = true;
+                },
+                updateExpress() {
+                    axios.post('/API/express.php', {
+                        action: 'update',
+                        token: localStorage.getItem('token'),
+                        express_id: this.editForm.express_id,
+                        wid: this.editForm.wid,
+                        express_type: this.editForm.express_type,
+                        courier_company: this.editForm.courier_company,
+                        tracking_id: this.editForm.tracking_id,
+                        postage: this.editForm.postage,
+                        delivery_time: this.editForm.delivery_time,
+                        courier_address: this.editForm.courier_address,
+                        remark: this.editForm.remark
+                    })
+                    .then(response => {
+                        if (response.data.code === 200) {
+                            this.$message.success('更新成功');
+                            this.editDialogVisible = false;
+                            this.fetchExpressList();
+                        } else {
+                            this.$message.error(response.data.msg);
+                        }
+                    })
+                    .catch(error => {
+                        this.$message.error('更新失败');
+                        console.error(error);
+                    });
+                },
+                // 复制收件地址
+                copyCourierAddress(address) {
+                    if (!address) {
+                        this.$message.warning('收件地址为空');
+                        return;
+                    }
+                    
+                    // 优先使用 Clipboard API
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(address).then(() => {
+                            this.$message.success('收件地址已复制');
+                        }).catch(err => {
+                            this.fallbackCopyText(address);
+                        });
+                    } else {
+                        // 备用复制方法
+                        this.fallbackCopyText(address);
+                    }
+                },
+                // 备用复制方法
+                fallbackCopyText(text) {
+                    return new Promise((resolve, reject) => {
+                        const textArea = document.createElement('textarea');
+                        textArea.value = text;
+                        textArea.style.position = 'fixed';
+                        textArea.style.left = '0';
+                        textArea.style.top = '0';
+                        textArea.style.zIndex = '-1';
+                        textArea.style.opacity = '0';
+                        
+                        document.body.appendChild(textArea);
+                        textArea.focus();
+                        textArea.select();
+                        
+                        try {
+                            const successful = document.execCommand('copy');
+                            if (successful) {
+                                this.$message.success('收件地址已复制');
+                                resolve();
+                            } else {
+                                this.$message.error('复制失败，请手动复制');
+                                reject();
+                            }
+                        } catch (err) {
+                            this.$message.error('复制失败，请手动复制');
+                            reject();
+                        } finally {
+                            document.body.removeChild(textArea);
+                        }
+                    });
+                },
+                // 复制收件地址并跳转到菜鸟裹裹
+                deliverExpress(row) {
+                    if (!row.courier_address) {
+                        this.$message.warning('收件地址为空，无法发货');
+                        return;
+                    }
+                    
+                    // 复制收件地址
+                    const copyAndJump = () => {
+                        this.$message.success('收件地址已复制，即将跳转到菜鸟裹裹');
+                        setTimeout(() => {
+                            window.open('https://fahuo.cainiao.com/web/order/ggSend.htm', '_blank');
+                        }, 500);
+                    };
+                    
+                    // 优先使用 Clipboard API
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(row.courier_address).then(() => {
+                            copyAndJump();
+                        }).catch(err => {
+                            this.fallbackCopyText(row.courier_address).then(() => {
+                                copyAndJump();
+                            });
+                        });
+                    } else {
+                        // 备用复制方法
+                        this.fallbackCopyText(row.courier_address).then(() => {
+                            copyAndJump();
+                        });
+                    }
+                },
+                deleteExpress(express_id) {
+                    this.$confirm('确定要删除这条快递记录吗?', '提示', {
+                        confirmButtonText: '确定',
+                        cancelButtonText: '取消',
+                        type: 'warning'
+                    }).then(() => {
+                        axios.post('/API/express.php', {
+                            action: 'delete',
+                            token: localStorage.getItem('token'),
+                            express_id: express_id
+                        })
+                        .then(response => {
+                            if (response.data.code === 200) {
+                                this.$message.success('删除成功');
+                                this.fetchExpressList();
+                            } else {
+                                this.$message.error(response.data.msg);
+                            }
+                        })
+                        .catch(error => {
+                            this.$message.error('删除失败');
+                            console.error(error);
+                        });
+                    }).catch(() => {});
+                }
+            }
+        });
+    </script>
+</body>
+</html>

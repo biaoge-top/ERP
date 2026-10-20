@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>手机功能检测工具</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:"Microsoft YaHei",sans-serif;background:#f4f6f8;color:#333}
+.container{max-width:700px;margin:0 auto;padding:15px}
+.title{text-align:center;background:#2d8cf0;color:#fff;padding:16px;border-radius:10px;margin-bottom:20px}
+.title h1{font-size:22px}
+.panel{background:#fff;border-radius:10px;padding:15px;margin-bottom:15px}
+.panel h2{font-size:16px;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #eee}
+.btns{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.btns.wide{grid-template-columns:repeat(3,1fr)}
+button{padding:14px;border:none;border-radius:8px;background:#2d8cf0;color:#fff;font-size:14px}
+button.secondary{background:#4cd964}
+.info{margin-top:10px;padding:10px;background:#f7f8fa;border-radius:6px;font-size:14px}
+.log{background:#1e1e1e;color:#00ff00;padding:10px;border-radius:6px;max-height:220px;overflow-y:auto;font-size:12px;line-height:1.6}
+.full{position:fixed;top:0;left:0;width:100%;height:100%;z-index:9999;display:none}
+.exit-btn{position:absolute;bottom:60px;left:50%;transform:translateX(-50%);padding:12px 30px;background:rgba(255,255,255,0.3);color:#fff;border:2px solid #fff;border-radius:30px}
+#touchCanvas{position:absolute;top:0;left:0;width:100%;height:100%}
+</style>
+</head>
+
+<body>
+<div class="container">
+    <div class="title">
+        <h1>手机功能检测工具</h1>
+    </div>
+
+    <div class="panel">
+        <h2>屏幕检测</h2>
+        <div class="btns wide">
+            <button onclick="burnTest()">烧屏测试</button>
+            <button onclick="colorTest()">色彩测试</button>
+            <button onclick="touchTest()">触摸测试</button>
+        </div>
+    </div>
+
+    <div class="panel">
+        <h2>声音测试</h2>
+        <div class="btns">
+            <button class="secondary" onclick="speaker()">扬声器</button>
+            <button class="secondary" onclick="receiver()">听筒</button>
+            <button onclick="testMic()">麦克风</button>
+            <button onclick="playAudioTest()">播放音频</button>
+        </div>
+    </div>
+
+    <div class="panel">
+        <h2>传感器</h2>
+        <div class="btns wide">
+            <button onclick="vibrate()">振动</button>
+            <button onclick="startGyro()">陀螺仪</button>
+            <button onclick="showBattery()">电池</button>
+        </div>
+        <div id="gyroData" class="info"></div>
+        <div id="batteryData" class="info"></div>
+    </div>
+
+    <div class="panel">
+        <h2>日志</h2>
+        <div id="log" class="log"></div>
+    </div>
+</div>
+
+<div id="fullView" class="full">
+    <canvas id="touchCanvas"></canvas>
+    <button class="exit-btn" onclick="closeFull()">退出</button>
+</div>
+
+<script>
+let testAudio = null;
+
+function log(m){
+    let t = new Date().toLocaleTimeString();
+    document.getElementById("log").innerHTML = `[${t}] ${m}<br>` + document.getElementById("log").innerHTML;
+}
+
+// ==========================
+// 播放音频测试（新增）
+// ==========================
+function playAudioTest() {
+    try {
+        if (testAudio) {
+            testAudio.pause();
+            testAudio = null;
+        }
+        testAudio = new Audio("https://app.xn--kwrr8v.top/MP3/%E6%B5%B7%E9%98%94%E5%A4%A9%E7%A9%BA.mp3");
+        testAudio.play();
+        log("正在播放测试音频");
+        
+        testAudio.onerror = function() {
+            log("音频播放失败");
+            alert("音频播放失败");
+        };
+    } catch (e) {
+        log("音频播放异常");
+        alert("音频播放失败");
+    }
+}
+
+// ==========================
+// 屏幕烧屏测试
+// ==========================
+let colors = ["#fff","#000","#f00","#0f0","#00f"];
+let ci=0;
+function burnTest(){
+    let f=document.getElementById("fullView");
+    f.style.display="block";
+    ci=0;
+    f.style.background=colors[0];
+    f.onclick=()=>{
+        ci=(ci+1)%colors.length;
+        f.style.background=colors[ci];
+    };
+    log("进入烧屏测试");
+}
+
+// ==========================
+// 色彩测试
+// ==========================
+function colorTest(){
+    let f=document.getElementById("fullView");
+    f.style.display="block";
+    f.onclick=null;
+    f.innerHTML=`<div style="display:grid;width:100%;height:100%;grid-template-columns:1fr 1fr 1fr">
+        <div style="background:#f00"></div><div style="background:#0f0"></div><div style="background:#00f"></div>
+        <div style="background:#ff0"></div><div style="background:#0ff"></div><div style="background:#f0f"></div>
+        <div style="background:#fff"></div><div style="background:#888"></div><div style="background:#000"></div>
+    </div><button class="exit-btn" onclick="closeFull()">退出</button>`;
+    log("进入色彩测试");
+}
+
+// ==========================
+// 触摸测试（完美轨迹）
+// ==========================
+function touchTest(){
+    let f=document.getElementById("fullView");
+    f.style.display="block";
+    f.style.background="#111";
+    f.innerHTML=`<canvas id="touchCanvas"></canvas><button class="exit-btn" onclick="closeFull()">退出</button>`;
+    let c=document.getElementById("touchCanvas");
+    let ctx=c.getContext("2d");
+    c.width=window.innerWidth; c.height=window.innerHeight;
+    ctx.strokeStyle="#0f0"; ctx.lineWidth=6; ctx.lineCap="round";
+    let d=false;
+    function b(e){let t=e.touches[0];ctx.beginPath();ctx.moveTo(t.clientX,t.clientY);d=true;}
+    function m(e){if(!d)return;e.preventDefault();let t=e.touches[0];ctx.lineTo(t.clientX,t.clientY);ctx.stroke();}
+    c.addEventListener("touchstart",b);
+    c.addEventListener("touchmove",m);
+    c.addEventListener("touchend",()=>d=false);
+    log("进入触摸测试");
+}
+
+function closeFull(){
+    document.getElementById("fullView").style.display="none";
+    document.getElementById("fullView").innerHTML=`<canvas id="touchCanvas"></canvas><button class="exit-btn" onclick="closeFull()">退出</button>`;
+    log("退出全屏");
+}
+
+// ==========================
+// 声音
+// ==========================
+function speaker(){
+    let a=new (window.AudioContext||window.webkitAudioContext)();
+    let o=a.createOscillator();let g=a.createGain();
+    o.connect(g);g.connect(a.destination);o.frequency.value=800;o.start();
+    setTimeout(()=>o.stop(),1000);
+    log("扬声器测试中");
+}
+
+function receiver(){
+    let a=new (window.AudioContext||window.webkitAudioContext)();
+    let o=a.createOscillator();let g=a.createGain();
+    o.connect(g);g.connect(a.destination);o.frequency.value=450;o.start();
+    setTimeout(()=>o.stop(),1500);
+    log("听筒测试中（贴近耳朵）");
+}
+
+// ==========================
+// 麦克风
+// ==========================
+function testMic() {
+    navigator.mediaDevices.getUserMedia({ audio: true })
+    .then(() => { log("麦克风正常"); alert("麦克风正常"); })
+    .catch(() => { log("麦克风测试失败"); alert("麦克风测试失败"); });
+}
+
+// ==========================
+// 振动
+// ==========================
+function vibrate() {
+    if (navigator.vibrate) {
+        navigator.vibrate(1000);
+        log("振动已触发");
+    } else {
+        alert("该设备不支持振动");
+        log("不支持振动");
+    }
+}
+
+// ==========================
+// 陀螺仪
+// ==========================
+let gyroRunning = false;
+function startGyro() {
+    if (gyroRunning) return;
+    gyroRunning = true;
+    if (window.DeviceMotionEvent) {
+        window.addEventListener("devicemotion", handleMotion);
+        document.getElementById("gyroData").innerText = "检测中...请移动手机";
+        log("陀螺仪已启动");
+    } else {
+        alert("该设备不支持陀螺仪");
+        gyroRunning = false;
+    }
+}
+function handleMotion(e) {
+    const d = document.getElementById("gyroData");
+    d.innerHTML = `
+加速度 X: ${e.acceleration.x?.toFixed(2) || 0}<br>
+加速度 Y: ${e.acceleration.y?.toFixed(2) || 0}<br>
+加速度 Z: ${e.acceleration.z?.toFixed(2) || 0}
+    `;
+}
+
+// ==========================
+// 电池
+// ==========================
+async function showBattery() {
+    if (!navigator.getBattery) {
+        alert("该浏览器不支持电池 API");
+        return;
+    }
+    const b = await navigator.getBattery();
+    document.getElementById("batteryData").innerHTML = `
+电量: ${(b.level * 100).toFixed(0)}%<br>
+充电中: ${b.charging ? "是" : "否"}
+    `;
+    log("电池信息已显示");
+}
+
+
+log("工具已启动");
+</script>
+</body>
+</html>

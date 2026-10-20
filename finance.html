@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>财务管理</title>
+    <link rel="stylesheet" href="style/css/element-ui.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+        .app-container {
+            width: 95%;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #409EFF;
+        }
+        .filter-bar {
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .el-table {
+            margin-bottom: 20px;
+        }
+        .el-table .cell {
+            white-space: normal;
+            word-break: break-all;
+            line-height: 1.5;
+        }
+        .stats-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 25px;
+            border-radius: 12px;
+            border: 1px solid rgba(64, 158, 255, 0.2);
+            box-shadow: 0 4px 20px rgba(64, 158, 255, 0.1);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            text-align: center;
+        }
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: linear-gradient(180deg, #409EFF, #79bbff);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .stat-card:hover::before {
+            opacity: 1;
+        }
+        .stat-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(64, 158, 255, 0.4);
+            box-shadow: 0 8px 30px rgba(64, 158, 255, 0.2);
+        }
+        .stat-card .label {
+            color: #909399;
+            font-size: 14px;
+            margin-bottom: 12px;
+            font-weight: 500;
+        }
+        .stat-card .value {
+            font-size: 23px;
+            font-weight: bold;
+            background: linear-gradient(135deg, #409EFF, #79bbff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: 1px;
+        }
+        .stat-card.income .value {
+            background: linear-gradient(135deg, #67C23A, #95d475);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .stat-card.expense .value {
+            background: linear-gradient(135deg, #F56C6C, #f78989);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .stat-card.profit .value {
+            background: linear-gradient(135deg, #E6A23C, #ebb563);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .app-container{
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="app-container" :style="wait">
+            <div class="header">
+                <h1>财务管理</h1>
+            </div>
+            
+            <div class="stats-cards">
+                <div class="stat-card expense">
+                    <div class="label">总收购价</div>
+                    <div class="value">{{ stats.totalPurchase | currency }}</div>
+                </div>
+          
+                <div class="stat-card expense">
+                    <div class="label">总成本</div>
+                    <div class="value">{{ stats.totalCost | currency }}</div>
+                </div>
+        
+                <div class="stat-card income">
+                    <div class="label">总售价</div>
+                    <div class="value">{{ stats.totalSelling | currency }}</div>
+                </div>
+                <div class="stat-card profit">
+                    <div class="label">总利润</div>
+                    <div class="value">{{ stats.totalProfit | currency }}</div>
+                </div>
+            </div>
+            
+            <div class="filter-bar">
+                <el-input v-model="filterForm.wid" placeholder="编号" clearable style="width: 100px;"></el-input>
+                <el-date-picker
+                    v-model="dateRange"
+                    type="daterange"
+                    range-separator="至"
+                    start-placeholder="采购开始"
+                    end-placeholder="采购结束"
+                    value-format="yyyy-MM-dd"
+                    @change="handleDateChange"
+                    style="width: 240px;"
+                ></el-date-picker>
+                <el-date-picker
+                    v-model="soldDateRange"
+                    type="daterange"
+                    range-separator="至"
+                    start-placeholder="售出开始"
+                    end-placeholder="售出结束"
+                    value-format="yyyy-MM-dd"
+                    @change="handleSoldDateChange"
+                    style="width: 240px;"
+                ></el-date-picker>
+                <el-select v-model="filterForm.brand" placeholder="品牌" clearable filterable style="width: 120px;" @change="handleBrandChange">
+                    <el-option v-for="brand in brands" :key="brand" :label="brand" :value="brand"></el-option>
+                </el-select>
+                <el-select v-model="filterForm.series" placeholder="系列" clearable filterable style="width: 120px;" @change="handleSeriesChange">
+                    <el-option v-for="series in seriesList" :key="series" :label="series" :value="series"></el-option>
+                </el-select>
+                <el-select v-model="filterForm.model" placeholder="型号" clearable filterable style="width: 120px;">
+                    <el-option v-for="model in modelList" :key="model" :label="model" :value="model"></el-option>
+                </el-select>
+                <el-select v-model="filterForm.storage" placeholder="配置" clearable filterable allow-create style="width: 120px;">
+                    <el-option v-for="storage in storageList" :key="storage" :label="storage" :value="storage"></el-option>
+                </el-select>
+                <el-select v-model="filterForm.color" placeholder="颜色" clearable filterable allow-create style="width: 120px;">
+                    <el-option v-for="color in colorList" :key="color" :label="color" :value="color"></el-option>
+                </el-select>
+                <el-select v-model="filterForm.acquisition_platform" placeholder="采购平台" clearable filterable allow-create style="width: 120px;">
+                    <el-option v-for="platform in platformList" :key="platform" :label="platform" :value="platform"></el-option>
+                </el-select>
+                <el-select v-model="filterForm.shop_id" placeholder="店铺" clearable filterable style="width: 120px;">
+                    <el-option v-for="shop in shopList" :key="shop.sid" :label="shop.shop_name" :value="shop.sid"></el-option>
+                </el-select>
+                <el-select v-model="filterForm.profit_type" placeholder="盈亏" clearable style="width: 100px;">
+                    <el-option label="盈利" value="positive"></el-option>
+                    <el-option label="亏损" value="negative"></el-option>
+                    <el-option label="持平" value="zero"></el-option>
+                </el-select>
+                <el-select v-model="filterForm.state" placeholder="状态" clearable style="width: 120px;">
+                    <el-option label="采购中" :value="1"></el-option>
+                    <el-option label="待质检" :value="2"></el-option>
+                    <el-option label="待上架" :value="3"></el-option>
+                    <el-option label="在销售" :value="4"></el-option>
+                    <el-option label="已销售" :value="5"></el-option>
+                    <el-option label="在售后" :value="6"></el-option>
+                    <el-option label="已售后" :value="7"></el-option>
+                </el-select>
+                <el-button type="primary" @click="applyFilter">筛选</el-button>
+                <el-button @click="resetFilter">重置</el-button>
+                <el-button type="success" @click="exportData">导出 Excel</el-button>
+            </div>
+            
+            <el-table :data="paginatedData" stripe show-summary :summary-method="getSummaries">
+                <el-table-column prop="wid" label="编号" width="80"></el-table-column>
+                <el-table-column label="型号" width="200" align="center">
+                    <template slot-scope="scope">
+                        <span>{{ scope.row.brand }} {{ scope.row.series }} {{ scope.row.model }}</span>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="storage" label="存储" width="80"></el-table-column>
+                <el-table-column prop="color" label="颜色" width="70"></el-table-column>
+                <el-table-column label="状态" width="80">
+                    <template slot-scope="scope">
+                        <span v-if="scope.row.state === 1" style="color: #409EFF;">采购中</span>
+                        <span v-else-if="scope.row.state === 2" style="color: #E6A23C;">待质检</span>
+                        <span v-else-if="scope.row.state === 3" style="color: #67C23A;">待上架</span>
+                        <span v-else-if="scope.row.state === 4" style="color: #909399;">在销售</span>
+                        <span v-else-if="scope.row.state === 5" style="color: #67C23A;">已销售</span>
+                        <span v-else-if="scope.row.state === 6" style="color: #F56C6C;">在售后</span>
+                        <span v-else-if="scope.row.state === 7" style="color: #909399;">已售后</span>
+                        <span v-else>-</span>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="acquisition_platform" label="采购平台" width="100"></el-table-column>
+                <el-table-column prop="shop_id" label="店铺" width="100">
+                    <template slot-scope="scope">
+                        <span>{{ getShopName(scope.row.shop_id) }}</span>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="purchase_price" label="收购价" width="100">
+                    <template slot-scope="scope">
+                        <span>{{ scope.row.purchase_price | currency }}</span>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="repair" label="维修费用" width="100">
+                    <template slot-scope="scope">
+                        <span>{{ scope.row.repair | currency }}</span>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="matching" label="配套费用" width="100">
+                    <template slot-scope="scope">
+                        <span>{{ scope.row.matching | currency }}</span>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="cost" label="总成本" width="100">
+                    <template slot-scope="scope">
+                        <span>{{ scope.row.cost | currency }}</span>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="postage" label="邮费" width="80">
+                    <template slot-scope="scope">
+                        <span>{{ scope.row.postage | currency }}</span>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="selling_price" label="售价" width="100">
+                    <template slot-scope="scope">
+                        <span>{{ scope.row.selling_price | currency }}</span>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="profit" label="利润" width="100">
+                    <template slot-scope="scope">
+                        <span :style="{color: scope.row.profit >= 0 ? '#67C23A' : '#F56C6C'}">{{ scope.row.profit | currency }}</span>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="acquisition_time" label="收购时间" width="120"></el-table-column>
+                <el-table-column prop="sell_time" label="出售时间" width="120"></el-table-column>
+            </el-table>
+            
+            <el-pagination
+                @size-change="handleSizeChange"
+                @current-change="handleCurrentChange"
+                :current-page="currentPage"
+                :page-sizes="[20, 50, 80, 100]"
+                :page-size="pageSize"
+                layout="total, sizes, prev, pager, next, jumper"
+                :total="total">
+            </el-pagination>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="style/js/vue.min.js"></script>
+    <script src="style/js/element-ui.js"></script>
+    <script src="style/js/axios.min.js"></script>
+    <script>
+        new Vue({
+            el: '#app',
+            data() {
+                return {
+                    wait:'display:block;',
+                    phoneList: [],
+                    filteredList: [],
+                    currentPage: 1,
+                    pageSize: 20,
+                    total: 0,
+                    dateRange: [],
+                    soldDateRange: [],
+                    filterForm: {
+                        wid: '',
+                        state: '',
+                        brand: '',
+                        series: '',
+                        model: '',
+                        storage: '',
+                        color: '',
+                        acquisition_platform: '',
+                        shop_id: '',
+                        profit_type: '',
+                        startDate: '',
+                        endDate: '',
+                        soldStartDate: '',
+                        soldEndDate: ''
+                    },
+                    stats: {
+                        totalPurchase: 0,
+                        totalRepair: 0,
+                        totalMatching: 0,
+                        totalCost: 0,
+                        totalPostage: 0,
+                        totalSelling: 0,
+                        totalProfit: 0
+                    },
+                    brands: [],
+                    seriesList: [],
+                    modelList: [],
+                    storageList: [],
+                    colorList: [],
+                    platformList: [],
+                    shopList: [],
+                    typesList: []
+                };
+            },
+            computed: {
+                paginatedData() {
+                    const start = (this.currentPage - 1) * this.pageSize;
+                    const end = start + this.pageSize;
+                    return this.filteredList.slice(start, end);
+                }
+            },
+            filters: {
+                currency(value) {
+                    if (value === null || value === undefined) return '0.00';
+                    return parseFloat(value).toFixed(2);
+                }
+            },
+            mounted() {
+                this.fetchPhones();
+                this.fetchTypes();
+                this.fetchSystemConfig();
+                this.fetchShops();
+            },
+            methods: {
+                // 品牌变化时清空系列和型号
+                handleBrandChange() {
+                    this.filterForm.series = '';
+                    this.filterForm.model = '';
+                    this.updateSeriesList();
+                },
+                // 系列变化时清空型号
+                handleSeriesChange() {
+                    this.filterForm.model = '';
+                    this.updateModelList();
+                },
+                // 更新系列列表
+                updateSeriesList() {
+                    if (!this.filterForm.brand) {
+                        this.seriesList = [];
+                        return;
+                    }
+                    const seriesSet = new Set();
+                    this.typesList.forEach(item => {
+                        if (item.brand === this.filterForm.brand) {
+                            seriesSet.add(item.series);
+                        }
+                    });
+                    this.seriesList = Array.from(seriesSet);
+                },
+                // 更新型号列表
+                updateModelList() {
+                    if (!this.filterForm.brand || !this.filterForm.series) {
+                        this.modelList = [];
+                        return;
+                    }
+                    const modelSet = new Set();
+                    this.typesList.forEach(item => {
+                        if (item.brand === this.filterForm.brand && item.series === this.filterForm.series) {
+                            modelSet.add(item.model);
+                        }
+                    });
+                    this.modelList = Array.from(modelSet);
+                },
+                fetchPhones() {
+                    axios.post('/API/phone.php', {
+                        action: 'get',
+                        token: localStorage.getItem('token'),
+                        wid: this.filterForm.wid,
+                        state: this.filterForm.state,
+                        brand: this.filterForm.brand,
+                        series: this.filterForm.series,
+                        model: this.filterForm.model,
+                        storage: this.filterForm.storage,
+                        color: this.filterForm.color,
+                        acquisition_platform: this.filterForm.acquisition_platform,
+                        shop_id: this.filterForm.shop_id,
+                        profit_type: this.filterForm.profit_type,
+                        startDate: this.filterForm.startDate,
+                        endDate: this.filterForm.endDate,
+                        soldStartDate: this.filterForm.soldStartDate,
+                        soldEndDate: this.filterForm.soldEndDate
+                    })
+                    .then(response => {
+                        if (response.data.code === 200) {
+                            this.phoneList = response.data.data;
+                            this.filteredList = response.data.data;
+                            this.total = response.data.data.length;
+                            this.calculateStats();
+                        } else {
+                            this.$message.error(response.data.msg);
+                        }
+                    })
+                    .catch(error => {
+                        this.$message.error('获取数据失败');
+                        console.error(error);
+                    });
+                },
+                fetchTypes() {
+                    axios.post('/API/types.php', {
+                        action: 'get',
+                        token: localStorage.getItem('token')
+                    })
+                    .then(response => {
+                        if (response.data.code === 200) {
+                            this.typesList = response.data.data;
+                            const brandSet = new Set();
+                            this.typesList.forEach(item => {
+                                brandSet.add(item.brand);
+                            });
+                            this.brands = Array.from(brandSet);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('获取型号列表失败:', error);
+                    });
+                },
+                fetchSystemConfig() {
+                    axios.post('/API/system.php', {
+                        action: 'get',
+                        token: localStorage.getItem('token')
+                    })
+                    .then(response => {
+                        if (response.data.code === 200) {
+                            const config = response.data.data;
+                            if (config.platform_system) {
+                                try {
+                                    const platformData = JSON.parse(config.platform_system);
+                                    this.platformList = platformData.platform || [];
+                                } catch (e) {
+                                    console.error('解析平台配置失败:', e);
+                                }
+                            }
+                            if (config.color_system) {
+                                try {
+                                    const colorData = JSON.parse(config.color_system);
+                                    this.colorList = colorData.color || [];
+                                } catch (e) {
+                                    console.error('解析颜色配置失败:', e);
+                                }
+                            }
+                            if (config.storage_system) {
+                                try {
+                                    const storageData = JSON.parse(config.storage_system);
+                                    this.storageList = storageData.storage || [];
+                                } catch (e) {
+                                    console.error('解析存储配置失败:', e);
+                                }
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('获取系统配置失败:', error);
+                    });
+                },
+                fetchShops() {
+                    axios.post('/API/shop.php', {
+                        action: 'get',
+                        token: localStorage.getItem('token')
+                    })
+                    .then(response => {
+                        if (response.data.code === 200) {
+                            this.shopList = response.data.data || [];
+                        }
+                    })
+                    .catch(error => {
+                        console.error('获取店铺列表失败:', error);
+                    });
+                },
+                calculateStats() {
+                    let totalPurchase = 0;
+                    let totalRepair = 0;
+                    let totalMatching = 0;
+                    let totalCost = 0;
+                    let totalPostage = 0;
+                    let totalSelling = 0;
+                    let totalProfit = 0;
+                    
+                    this.filteredList.forEach(item => {
+                        totalPurchase += parseFloat(item.purchase_price) || 0;
+                        totalRepair += parseFloat(item.repair) || 0;
+                        totalMatching += parseFloat(item.matching) || 0;
+                        totalCost += parseFloat(item.cost) || 0;
+                        totalPostage += parseFloat(item.postage) || 0;
+                        totalSelling += parseFloat(item.selling_price) || 0;
+                        totalProfit += parseFloat(item.profit) || 0;
+                    });
+                    
+                    this.stats = {
+                        totalPurchase,
+                        totalRepair,
+                        totalMatching,
+                        totalCost,
+                        totalPostage,
+                        totalSelling,
+                        totalProfit
+                    };
+                },
+                handleDateChange(val) {
+                    if (val) {
+                        this.filterForm.startDate = val[0];
+                        this.filterForm.endDate = val[1];
+                    } else {
+                        this.filterForm.startDate = '';
+                        this.filterForm.endDate = '';
+                    }
+                },
+                handleSoldDateChange(val) {
+                    if (val) {
+                        this.filterForm.soldStartDate = val[0];
+                        this.filterForm.soldEndDate = val[1];
+                    } else {
+                        this.filterForm.soldStartDate = '';
+                        this.filterForm.soldEndDate = '';
+                    }
+                },
+                applyFilter() {
+                    this.currentPage = 1;
+                    this.fetchPhones();
+                },
+                resetFilter() {
+                    this.filterForm = {
+                        wid: '',
+                        state: '',
+                        brand: '',
+                        series: '',
+                        model: '',
+                        storage: '',
+                        color: '',
+                        acquisition_platform: '',
+                        shop_id: '',
+                        profit_type: '',
+                        startDate: '',
+                        endDate: '',
+                        soldStartDate: '',
+                        soldEndDate: ''
+                    };
+                    this.dateRange = [];
+                    this.soldDateRange = [];
+                    this.seriesList = [];
+                    this.modelList = [];
+                    this.currentPage = 1;
+                    this.fetchPhones();
+                },
+                handleSizeChange(size) {
+                    this.pageSize = size;
+                    this.currentPage = 1;
+                },
+                handleCurrentChange(current) {
+                    this.currentPage = current;
+                },
+                // 获取店铺名称
+                getShopName(shopId) {
+                    if (!shopId) return '-';
+                    const shop = this.shopList.find(s => s.sid === shopId);
+                    return shop ? shop.shop_name : '-';
+                },
+                getSummaries(param) {
+                    const { columns, data } = param;
+                    const sums = [];
+                    columns.forEach((column, index) => {
+                        if (index === 0) {
+                            sums[index] = '合计';
+                            return;
+                        }
+                        const fields = ['purchase_price', 'repair', 'matching', 'cost', 'postage', 'selling_price', 'profit'];
+                        if (fields.includes(column.property)) {
+                            const values = data.map(item => Number(item[column.property]));
+                            if (!values.every(value => isNaN(value))) {
+                                sums[index] = values.reduce((prev, curr) => {
+                                    const value = Number(curr);
+                                    if (!isNaN(value)) {
+                                        return prev + curr;
+                                    } else {
+                                        return prev;
+                                    }
+                                }, 0).toFixed(2);
+                            } else {
+                                sums[index] = '0.00';
+                            }
+                        } else {
+                            sums[index] = '';
+                        }
+                    });
+                    return sums;
+                },
+                exportData() {
+                    if (this.filteredList.length === 0) {
+                        this.$message.warning('没有数据可导出');
+                        return;
+                    }
+                    
+                    let csv = '\uFEFF';
+                    csv += '编号，品牌，系列，型号，存储，颜色，状态，采购平台，店铺，收购价，维修费用，配套费用，总成本，邮费，售价，利润，收购时间，出售时间\n';
+                    
+                    const stateMap = {
+                        1: '采购中',
+                        2: '待质检',
+                        3: '待上架',
+                        4: '在销售',
+                        5: '已销售',
+                        6: '在售后',
+                        7: '已售后'
+                    };
+                    
+                    this.filteredList.forEach(item => {
+                        const shopName = this.getShopName(item.shop_id);
+                        csv += `${item.wid || ''},${item.brand || ''},${item.series || ''},${item.model || ''},${item.storage || ''},${item.color || ''},${stateMap[item.state] || ''},${item.acquisition_platform || ''},${shopName || ''},${item.purchase_price || 0},${item.repair || 0},${item.matching || 0},${item.cost || 0},${item.postage || 0},${item.selling_price || 0},${item.profit || 0},${item.acquisition_time || ''},${item.sell_time || ''}\n`;
+                    });
+                    
+                    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                    const link = document.createElement('a');
+                    const url = URL.createObjectURL(blob);
+                    link.setAttribute('href', url);
+                    link.setAttribute('download', `财务报表_${new Date().toISOString().slice(0,10)}.csv`);
+                    link.style.visibility = 'hidden';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                }
+            }
+        });
+    </script>
+</body>
+</html>

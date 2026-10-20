@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta itemprop="image" content="//xn--kwrr8v.top/style/image/logo.ico">
+	<link rel="shortcut icon" href="//xn--kwrr8v.top/style/image/logo.ico"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>森信ERP | 管理系统</title>
+    <link rel="stylesheet" href="style/css/element-ui.css">
+   
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            overflow: hidden;
+            /* min-width: 1000px; */
+        }
+        html{
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        
+        /* 顶部导航栏 - 科技蓝黑渐变 */
+        .top {
+            height: 60px;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #1e3c72 100%);
+            background-size: 200% 200%;
+            animation: gradientFlow 8s ease infinite;
+            line-height: 60px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #fff;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 20px rgba(0, 150, 255, 0.4);
+            position: relative;
+            z-index: 1000;
+        }
+        
+        @keyframes gradientFlow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        .top-title {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            white-space: nowrap;
+        }
+        
+        .top-title h2 {
+            background: linear-gradient(to right, #00f5ff, #00d4ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 0 20px rgba(0, 245, 255, 0.5);
+            letter-spacing: 2px;
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 5px 15px;
+            border-radius: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .user-info:hover {
+            background: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 0 20px rgba(200, 245, 255, 0.3);
+        }
+        
+        .username {
+            color: #00f5ff;
+            font-size: 20px;
+            font-weight: 500;
+            text-shadow: 0 0 10px rgba(0, 245, 255, 0.5);
+        }
+        
+        /* 内容区域 */
+        .content {
+            height: calc(100vh - 60px);
+            width: 100%;
+            margin: 0 auto;
+            background: linear-gradient(180deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+            display: flex;
+            position: relative;
+        }
+        
+        /* 背景动画 */
+        .content::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                radial-gradient(circle at 20% 50%, rgba(0, 245, 255, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(0, 212, 255, 0.1) 0%, transparent 50%);
+            animation: bgPulse 10s ease-in-out infinite;
+            pointer-events: none;
+        }
+        
+        @keyframes bgPulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+        
+        /* 左侧菜单 - 玻璃态效果 */
+        .left {
+            width: 200px;
+            background: rgba(15, 32, 39, 0.8);
+            backdrop-filter: blur(20px);
+            border-right: 1px solid rgba(0, 245, 255, 0.2);
+            box-shadow: 4px 0 30px rgba(0, 245, 255, 0.1);
+            overflow-y: auto;
+            position: relative;
+            z-index: 100;
+        }
+        
+        .left::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .left::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+        }
+        
+        .left::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #00f5ff, #00d4ff);
+            border-radius: 3px;
+        }
+        
+        .menu {
+            height: 50px;
+            line-height: 50px;
+            text-align: center;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.8);
+            padding: 0 20px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            border-left: 3px solid transparent;
+        }
+        
+        .menu::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 245, 255, 0.2), transparent);
+            transition: left 0.5s ease;
+        }
+        
+        .menu:hover::before {
+            left: 100%;
+        }
+        
+        .menu:hover {
+            background: linear-gradient(90deg, rgba(0, 245, 255, 0.1), rgba(0, 212, 255, 0.05));
+            color: #00f5ff;
+            border-left: 3px solid #00f5ff;
+            box-shadow: inset 4px 0 15px rgba(0, 245, 255, 0.2);
+        }
+        
+        .menu.active {
+            background: linear-gradient(90deg, rgba(0, 245, 255, 0.2), rgba(0, 212, 255, 0.1));
+            color: #fff;
+            border-left: 3px solid #00f5ff;
+            box-shadow: inset 4px 0 20px rgba(0, 245, 255, 0.3);
+            text-shadow: 0 0 10px rgba(0, 245, 255, 0.8);
+        }
+        
+        .menu h2 {
+            font-size: 15px;
+            font-weight: 500;
+            letter-spacing: 1px;
+        }
+        
+        /* 右侧内容区 */
+        .right {
+            flex: 1;
+            width: calc(100% - 200px);
+            height: 100%;
+            background: transparent;
+            position: relative;
+            z-index: 10;
+        }
+        
+        .right iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: rgba(255, 255, 255, 0.95);
+        }
+        
+        /* 装饰性光效 */
+        .glow-effect {
+            position: fixed;
+            width: 300px;
+            height: 300px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(0, 245, 255, 0.15) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 1;
+            animation: float 15s ease-in-out infinite;
+        }
+        
+        .glow-1 {
+            top: -150px;
+            right: -150px;
+        }
+        
+        .glow-2 {
+            bottom: -150px;
+            left: -150px;
+            animation-delay: -7s;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(30px, -30px) scale(1.1); }
+            66% { transform: translate(-20px, 20px) scale(0.9); }
+        }
+        
+        /* 移动端菜单按钮 */
+        .mobile-menu-btn {
+            
+            display: none;
+            cursor: pointer;
+            padding: 10px;
+            z-index: 1001;
+        }
+        
+        .mobile-menu-btn .hamburger {
+            width: 24px;
+            height: 2px;
+            background: #00f5ff;
+            position: relative;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 10px rgba(0, 245, 255, 0.5);
+        }
+        
+        .mobile-menu-btn .hamburger::before,
+        .mobile-menu-btn .hamburger::after {
+            content: '';
+            position: absolute;
+            width: 24px;
+            height: 2px;
+            background: #00f5ff;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 10px rgba(0, 245, 255, 0.5);
+        }
+        
+        .mobile-menu-btn .hamburger::before {
+            top: -8px;
+        }
+        
+        .mobile-menu-btn .hamburger::after {
+            top: 8px;
+        }
+        
+        .mobile-menu-btn.active .hamburger {
+            background: transparent;
+        }
+        
+        .mobile-menu-btn.active .hamburger::before {
+            top: 0;
+            transform: rotate(45deg);
+        }
+        
+        .mobile-menu-btn.active .hamburger::after {
+            top: 0;
+            transform: rotate(-45deg);
+        }
+        
+        /* 移动端下拉菜单 */
+        .mobile-dropdown {
+            display: none;
+            position: absolute;
+            top: 60px;
+            left: 0;
+            width: 200px;
+            background: rgba(15, 32, 39, 0.95);
+            backdrop-filter: blur(20px);
+            border-left: 1px solid rgba(0, 245, 255, 0.2);
+            border-bottom: 1px solid rgba(0, 245, 255, 0.2);
+            box-shadow: -4px 4px 30px rgba(0, 245, 255, 0.2);
+            z-index: 999;
+            max-height: calc(100vh - 60px);
+            overflow-y: auto;
+        }
+        
+        .mobile-dropdown .menu {
+            height: 50px;
+            line-height: 50px;
+            text-align: left;
+            padding: 0 20px;
+            border-left: none;
+            border-bottom: 1px solid rgba(0, 245, 255, 0.1);
+        }
+        
+        .mobile-dropdown .menu:last-child {
+            border-bottom: none;
+        }
+        
+        .mobile-dropdown::-webkit-scrollbar {
+            width: 4px;
+        }
+        
+        .mobile-dropdown::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+        }
+        
+        .mobile-dropdown::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #00f5ff, #00d4ff);
+            border-radius: 2px;
+        }
+        
+       /* 适配移动端 */
+        @media screen and (max-width: 768px) {
+            body {
+                min-width: 1000px;
+            }
+            
+            .mobile-menu-btn {
+                display: block;
+            }
+            
+            .mobile-dropdown {
+                display: block;
+            }
+            
+            .left {
+                display: none;
+            }
+            
+            .top-title h2 {
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 装饰光效 -->
+    <div class="glow-effect glow-1"></div>
+    <div class="glow-effect glow-2"></div>
+    
+    <div id="app">
+        <!-- 桌面端 -->
+        <div class="desktop-container" >
+            <div class="top">
+                <div class="top-title">
+                    <!-- 移动端菜单按钮 -->
+                    <div class="mobile-menu-btn" :class="{ active: mobileMenuOpen }" @click="toggleMobileMenu">
+                        <div class="hamburger"></div>
+                    </div>
+                    <h2>☘️ 森信 ERP 管理系统</h2>
+                </div>
+            
+            <!-- 移动端下拉菜单 -->
+            <div class="mobile-dropdown" v-show="mobileMenuOpen">
+                <div class="menu" :class="{ active: currentMenu === 'overview' }" @click="changeMenu('overview')">
+                    <h2>总览</h2>
+                </div>
+                <div class="menu" :class="{ active: currentMenu === 'purchase' }" @click="changeMenu('purchase')">
+                    <h2>采购管理</h2>
+                </div>
+                <div class="menu" :class="{ active: currentMenu === 'quality' }" @click="changeMenu('quality')">
+                    <h2>质检管理</h2>
+                </div>
+                <div class="menu" :class="{ active: currentMenu === 'sell' }" @click="changeMenu('sell')">
+                    <h2>销售管理</h2>   
+                </div>
+                <div class="menu" :class="{ active: currentMenu === 'phone' }" @click="changeMenu('phone')">
+                    <h2>手机管理</h2>
+                </div>
+                <div class="menu" :class="{ active: currentMenu === 'express' }" @click="changeMenu('express')">
+                    <h2>快递管理</h2>
+                </div>
+                <div class="menu" :class="{ active: currentMenu === 'model' }" @click="changeMenu('model')">
+                    <h2>型号管理</h2>
+                </div>
+                <div class="menu" :class="{ active: currentMenu === 'company' }" @click="changeMenu('company')">
+                    <h2>企业管理</h2>
+                </div>
+                <div class="menu" :class="{ active: currentMenu === 'finance' }" @click="changeMenu('finance')">
+                    <h2>财务管理</h2>
+                </div>
+            </div>
+            <div class="user-info" v-if="username">
+                <span class="username">{{ username }}</span>
+                <el-button type="danger" size="small" @click="logout" style="border-radius: 15px; border: none; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); box-shadow: 0 2px 10px rgba(245, 87, 108, 0.4);">退出登录</el-button>
+            </div>
+        </div>
+        <div class="content">
+            <div class="left">
+                <div class="menu" :class="{ active: currentMenu === 'overview' }" @click="changeMenu('overview')">
+                    <h2>总览</h2>
+                </div>
+                <div class="menu" :class="{ active: currentMenu === 'purchase' }" @click="changeMenu('purchase')">
+                    <h2>采购管理</h2>
+                </div>
+                <div class="menu" :class="{ active: currentMenu === 'quality' }" @click="changeMenu('quality')">
+                    <h2>质检管理</h2>
+                </div>
+                <div class="menu" :class="{ active: currentMenu === 'sell' }" @click="changeMenu('sell')">
+                    <h2>销售管理</h2>   
+                </div>
+                <div class="menu" :class="{ active: currentMenu === 'phone' }" @click="changeMenu('phone')">
+                    <h2>手机管理</h2>
+                </div>
+                <div class="menu" :class="{ active: currentMenu === 'express' }" @click="changeMenu('express')">
+                    <h2>快递管理</h2>
+                </div>
+                <div class="menu" :class="{ active: currentMenu === 'model' }" @click="changeMenu('model')">
+                    <h2>型号管理</h2>
+                </div>
+                <div class="menu" :class="{ active: currentMenu === 'company' }" @click="changeMenu('company')">
+                    <h2>企业管理</h2>
+                </div>
+                <div class="menu" :class="{ active: currentMenu === 'finance' }" @click="changeMenu('finance')">
+                    <h2>财务管理</h2>
+                </div>
+            </div>
+            
+            <div class="right">
+                <iframe :src="currentMenu + '.html'" frameborder="0"></iframe>
+            </div>
+        </div>
+        
+        
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="style/js/vue.min.js"></script>
+    <script src="style/js/element-ui.js"></script>
+    <script src="style/js/axios.min.js"></script>
+    <script>
+        new Vue({
+            el: '#app',
+            data: {
+                currentMenu: 'overview',
+                username: '',
+                isMobile: false,
+                mobileMenuOpen: false
+            },
+            mounted() {
+                this.checkMobile();
+                window.addEventListener('resize', this.checkMobile);
+                this.username = localStorage.getItem('username');
+                // 每 10 秒检查一次登录状态变化，登录成功不再检测
+                if (!this.username||this.username===''||this.username=='null') {
+                    setInterval(this.checkLoginStatus, 10000);
+                }
+               
+            },
+            methods: {
+                checkMobile() {
+                    this.isMobile = window.innerWidth <= 768;
+                },
+                toggleMobileMenu() {
+                    this.mobileMenuOpen = !this.mobileMenuOpen;
+                },
+                checkLoginStatus() {
+                    this.username = localStorage.getItem('username');
+                },
+                changeMenu(menu) {
+                    this.currentMenu = menu;
+                    this.mobileMenuOpen = false;
+                },
+                logout() {
+                    this.$confirm('确定要退出登录吗？', '提示', {
+                        confirmButtonText: '确定',
+                        cancelButtonText: '取消',
+                        type: 'warning'
+                    }).then(() => {
+                        // 清除登录状态
+                        this.username = '';
+                        localStorage.clear();
+                        this.changeMenu("login");
+                    }).catch(() => {
+                        this.$message.info('已取消退出');
+                    });
+                }
+            }
+        })
+    </script>
+</body>
+</html>

@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>质检管理</title>
+    <link rel="stylesheet" href="style/css/element-ui.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+        .app-container {
+            width: 95%;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #409EFF;
+        }
+        .statistics-bar {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 25px;
+            border-radius: 12px;
+            border: 1px solid rgba(64, 158, 255, 0.2);
+            box-shadow: 0 4px 20px rgba(64, 158, 255, 0.1);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            text-align: center;
+        }
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: linear-gradient(180deg, #409EFF, #79bbff);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .stat-card:hover::before {
+            opacity: 1;
+        }
+        .stat-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(64, 158, 255, 0.4);
+            box-shadow: 0 8px 30px rgba(64, 158, 255, 0.2);
+        }
+        .stat-card h3 {
+            font-size: 14px;
+            color: #909399;
+            margin-bottom: 12px;
+            font-weight: 500;
+        }
+        .stat-card .number {
+            font-size: 32px;
+            font-weight: bold;
+            background: linear-gradient(135deg, #409EFF, #79bbff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
+        }
+        .stat-card .unit {
+            font-size: 12px;
+            color: #c0c4cc;
+        }
+        .operation-bar {
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .filter-bar {
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .filter-item {
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        .el-table {
+            margin-bottom: 20px;
+        }
+        .el-input {
+            width: auto;
+        }
+        .el-form-item {
+            margin-bottom: 10px;
+        }
+        .dialog-form {
+            width: 100%;
+        }
+        .el-form-item__content{
+            display: flex;
+        }
+        .el-date-editor.el-input {
+            width: 100%;
+        }
+        .el-select {
+            width: 100%;
+        }
+        .pagination-container {
+            display: flex;
+            justify-content: flex-end;
+        }
+        .el-tag {
+            height: 25px;
+            padding: 0 5px;
+            line-height: 25px;
+        }
+        .app-container{
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="app-container" :style="wait">
+            <div class="header">
+                <h1>质检管理</h1>
+            </div>
+            
+            <!-- 统计卡片 -->
+            <div class="statistics-bar">
+                <div class="stat-card blue">
+                    <h3>待质检数量</h3>
+                    <div class="number">{{ statistics.qualityCount }}</div>
+                    <div class="unit">台</div>
+                </div>
+                 <div class="stat-card blue">
+                    <h3>当前库存</h3>
+                    <div class="number">{{ statistics.inventoryCount }}</div>
+                    <div class="unit">台</div>
+                </div>
+            </div>
+            
+            <!-- 操作栏 -->
+            <div class="operation-bar">
+                <el-input placeholder="机器编码" v-model="searchQuery" style="width: 350px;">
+                    <el-button slot="append" icon="el-icon-search" @click="search"></el-button>
+                </el-input>
+                <el-button type="primary" @click="batchQualityCheck">一键质检</el-button>
+            </div>
+            
+            <!-- 筛选栏 -->
+            <div class="filter-bar">
+                <div class="filter-item">
+                    <el-select v-model="filterForm.brand" placeholder="品牌" clearable filterable @change="applyFilter" style="width: 150px;">
+                        <el-option v-for="brand in brands" :key="brand" :label="brand" :value="brand"></el-option>
+                    </el-select>
+                </div>
+                <div class="filter-item">
+                    <el-select v-model="filterForm.series" placeholder="系列" clearable filterable @change="applyFilter" style="width: 150px;">
+                        <el-option v-for="series in seriesList" :key="series" :label="series" :value="series"></el-option>
+                    </el-select>
+                </div>
+                <div class="filter-item">
+                    <el-select v-model="filterForm.model" placeholder="型号" clearable filterable @change="applyFilter" style="width: 150px;">
+                        <el-option v-for="model in modelList" :key="model" :label="model" :value="model"></el-option>
+                    </el-select>
+                </div>
+                <div class="filter-item">
+                    <el-button @click="resetFilter">重置筛选</el-button>
+                </div>
+            </div>
+            
+            <!-- 数据表格 -->
+            <el-table :data="paginatedPhones" stripe>
+                <el-table-column prop="machine_code" label="机器编码" width="120"></el-table-column>
+                <el-table-column label="型号" width="150">
+                    <template slot-scope="scope">{{ scope.row.brand+' '+scope.row.series+scope.row.model }}</template>
+                </el-table-column>
+                <el-table-column label="存储" width="100">
+                    <template slot-scope="scope">{{ scope.row.storage }}</template>
+                </el-table-column>
+                <el-table-column label="颜色" width="80">
+                    <template slot-scope="scope">{{ scope.row.color }}</template>
+                </el-table-column>
+                <el-table-column label="电池效率" width="80">
+                    <template slot-scope="scope">{{ scope.row.battery }}%</template>
+                </el-table-column>
+              
+                <el-table-column prop="acquisition_platform" label="采购平台" width="80"></el-table-column>
+                <el-table-column prop="purchase_price" label="采购价" width="100"></el-table-column>
+                <el-table-column prop="acquisition_time" label="采购时间" width="120"></el-table-column>
+                <el-table-column prop="remark" label="备注" width="200"></el-table-column>
+                <el-table-column label="操作" width="150" fixed="right">
+                    <template slot-scope="scope">
+                        <el-button type="primary" size="small" @click="openEditDialog(scope.row)">编辑</el-button>
+                        <el-button type="success" size="small" @click="handleQualityCheck(scope.row)">通过</el-button>
+                    </template>
+                </el-table-column>
+            </el-table>
+            
+            <!-- 分页 -->
+            <div class="pagination-container">
+                <el-pagination
+                    background
+                    layout="total, prev, pager, next"
+                    :current-page="currentPage"
+                    :page-size="pageSize"
+                    :total="total"
+                    @current-change="handlePageChange">
+                </el-pagination>
+            </div>
+            
+            <!-- 编辑对话框 -->
+            <el-dialog title="编辑机器信息" :visible.sync="editDialogVisible" width="580px">
+                <el-form :model="editForm" class="dialog-form">
+                    <el-row :gutter="20">
+                       
+                        <el-col :span="12">
+                            <el-form-item label="采购时间">
+                                <el-date-picker v-model="editForm.acquisition_time" type="date" placeholder="选择日期" value-format="yyyy-MM-dd"></el-date-picker>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="12">
+                            <el-form-item label="采购平台">
+                                <el-select v-model="editForm.acquisition_platform" placeholder="请选择采购平台" filterable allow-create>
+                                    <el-option v-for="platform in platformList" :key="platform" :label="platform" :value="platform"></el-option>
+                                </el-select>
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="20" style="display: flex;">
+                        <el-col :span="12">
+                            <el-form-item label="型号">
+                                <el-select v-model="editForm.brand" placeholder="请选择品牌" filterable allow-create @change="handleEditBrandChange">
+                                    <el-option v-for="brand in brands" :key="brand" :label="brand" :value="brand"></el-option>
+                                </el-select>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="12">
+                                <el-select v-model="editForm.series" placeholder="请选择系列" filterable allow-create @change="handleEditSeriesChange">
+                                    <el-option v-for="series in seriesList" :key="series" :label="series" :value="series"></el-option>
+                                </el-select>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="12">
+                                <el-select v-model="editForm.model" placeholder="请选择型号" filterable allow-create>
+                                    <el-option v-for="model in modelList" :key="model" :label="model" :value="model"></el-option>
+                                </el-select>
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="20" style="display: flex;">
+                        <el-col :span="12">
+                            <el-form-item label="存储">
+                                <el-select v-model="editForm.storage" placeholder="请选择存储" filterable allow-create>
+                                    <el-option v-for="storage in storageList" :key="storage" :label="storage" :value="storage"></el-option>
+                                </el-select>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="12">
+                            <el-form-item label="颜色">
+                                <el-select v-model="editForm.color" placeholder="请选择颜色" filterable allow-create>
+                                    <el-option v-for="color in colorList" :key="color" :label="color" :value="color"></el-option>
+                                </el-select>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="12">
+                            <el-form-item label="电池效率">
+                                <el-input v-model="editForm.battery" :min="0" :max="100" placeholder="电池效率"></el-input>
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="20">
+                         <el-col :span="12">
+                            <el-form-item label="机器编码">
+                                <el-input v-model="editForm.machine_code" placeholder="请输入机器编码"></el-input>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="12">
+                            <el-form-item label="采购价">
+                                <el-input-number v-model="editForm.purchase_price" :min="0" :precision="2" placeholder="采购价"></el-input-number>
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="20">
+                        <el-col :span="12">
+                            <el-form-item label="维修费用">
+                                <el-input-number v-model="editForm.repair" :min="0" :precision="2" placeholder="维修费用"></el-input-number>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="12">
+                            <el-form-item label="配套费用">
+                                <el-input-number v-model="editForm.matching" :min="0" :precision="2" placeholder="配套费用"></el-input-number>
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="20">
+                        <el-col :span="12">
+                            <el-form-item label="成本">
+                                <el-input :value="editFormCost" disabled></el-input>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="12">
+                            <el-form-item label="状态">
+                                <el-select v-model="editForm.state" placeholder="请选择状态">
+                                    <el-option label="采购中" :value="1"></el-option>
+                                    <el-option label="待质检" :value="2"></el-option>
+                                    <el-option label="待上架" :value="3"></el-option>
+                                    <el-option label="在销售" :value="4"></el-option>
+                                    <el-option label="已销售" :value="5"></el-option>
+                                    <el-option label="在售后" :value="6"></el-option>
+                                    <el-option label="已售后" :value="7"></el-option>
+                                </el-select>
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="20">
+                        <el-col :span="24">
+                            <el-form-item label="备注">
+                                <el-input v-model="editForm.remark" type="textarea" :rows="2" placeholder="请输入备注"></el-input>
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="20">
+                        <el-col :span="24">
+                            <el-form-item label="常见问题">
+                                <div style="display: flex; flex-wrap: wrap;">
+                                    <el-tag v-for="issue in commonIssues" :key="issue" @click="addIssueToRemark(issue)" style="cursor: pointer; margin: 4px;">
+                                        {{ issue }}
+                                    </el-tag>
+                                </div>
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
+                    
+                </el-form>
+                <span slot="footer" class="dialog-footer">
+                    <el-button @click="editDialogVisible = false">取消</el-button>
+                    <el-button type="primary" @click="updatePhone">确定</el-button>
+                </span>
+            </el-dialog>
+        </div>
+    </div>
+    
+    <script src="style/js/vue.min.js"></script>
+    <script src="style/js/element-ui.js"></script>
+    <script src="style/js/axios.min.js"></script>
+    <script>
+        new Vue({
+            el: '#app',
+            data: {
+                    wait:'display:block;',
+                statistics: {
+                    qualityCount: 0
+                },
+                phoneList: [],
+                currentPage: 1,
+                pageSize: 10,
+                total: 0,
+                searchQuery: '',
+                filterForm: {
+                    brand: '',
+                    series: '',
+                    model: '',
+                },
+                editDialogVisible: false,
+                editForm: {
+                    machine_code: '',
+                    acquisition_time: '',
+                    brand: '',
+                    series: '',
+                    model: '',
+                    storage: '',
+                    color: '',
+                    battery: 100,
+                    acquisition_platform: '',
+                    purchase_price: 0,
+                    repair: 0,
+                    matching: 1,
+                    postage: 0,
+                    state: 2,
+                    remark: ''
+                },
+                typesList: [],
+                brands: [],
+                seriesList: [],
+                modelList: [],
+                colorList: [],
+                storageList: [],
+                platformList: [],
+                commonIssues: [
+                    '后盖裂',
+                    '换后盖',
+                    '屏幕烧屏',
+                    '外屏裂',
+                    '后摄发白',
+                    '镜头盖碎，不影响拍照', 
+                    '轻微烧屏',
+                    '换国产屏',
+                    '指纹用不了',
+                    '后盖小裂',
+                    '前摄模糊',
+                    '屏幕漏液',
+                    '成色好见图',
+                    '出线',
+                    '闪屏',
+                    '断触',
+                    '屏幕坏',
+                    'NFC无法使用',
+                    '不通话',
+                    '死机重启',
+                    '无法开机',
+                    '虚焊',
+                ]
+            },
+            created() {
+                this.fetchStatistics();
+                this.fetchPhones();
+                this.fetchTypes();
+                this.fetchSystemConfig();
+            },
+            computed: {
+                paginatedPhones() {
+                    const start = (this.currentPage - 1) * this.pageSize;
+                    const end = start + this.pageSize;
+                    return this.phoneList.slice(start, end);
+                },
+                editFormCost() {
+                    const purchasePrice = parseFloat(this.editForm.purchase_price) || 0;
+                    const repair = parseFloat(this.editForm.repair) || 0;
+                    const matching = parseFloat(this.editForm.matching) || 1;
+                    return (purchasePrice + repair + matching).toFixed(2);
+                }
+            },
+            watch: {
+                'editForm.brand': function(newBrand) {
+                    const brand = newBrand;
+                    const seriesSet = new Set();
+                    this.typesList.forEach(item => {
+                        if (item.brand === brand) {
+                            seriesSet.add(item.series);
+                        }
+                    });
+                    this.seriesList = Array.from(seriesSet);
+                    this.modelList = [];
+                },
+                'editForm.series': function(newSeries) {
+                    const brand = this.editForm.brand;
+                    const series = newSeries;
+                    const modelSet = new Set();
+                    this.typesList.forEach(item => {
+                        if (item.brand === brand && item.series === series) {
+                            modelSet.add(item.model);
+                        }
+                    });
+                    this.modelList = Array.from(modelSet);
+                }
+            },
+            methods: {
+                batchQualityCheck() {
+                    this.$confirm('确定要将所有待质检的机器改为待上架状态吗？', '提示', {
+                        confirmButtonText: '确定',
+                        cancelButtonText: '取消',
+                        type: 'warning'
+                    }).then(() => {
+                        axios.post('/API/quality.php', {
+                            action: 'batch_quality_check',
+                            token: localStorage.getItem('token')
+                        })
+                        .then(response => {
+                            if (response.data.code === 200) {
+                                this.$message.success(`质检成功，共处理 ${response.data.count} 台机器`);
+                                this.fetchPhones();
+                                this.fetchStatistics();
+                            } else {
+                                this.$message.error(response.data.msg);
+                            }
+                        })
+                        .catch(error => {
+                            this.$message.error('质检失败');
+                            console.error(error);
+                        });
+                    }).catch(() => {
+                        // 用户取消
+                    });
+                },
+                handleQualityCheck(row) {
+                    axios.post('/API/quality.php', {
+                        action: 'quality_check',
+                        token: localStorage.getItem('token'),
+                        wid: row.wid,
+                        state: 3
+                    })
+                    .then(response => {
+                        if (response.data.code === 200) {
+                            this.$message.success('质检成功');
+                            this.fetchPhones();
+                            this.fetchStatistics();
+                        } else {
+                            this.$message.error(response.data.msg);
+                        }
+                    })
+                    .catch(error => {
+                        this.$message.error('质检失败');
+                        console.error(error);
+                    });
+                },
+                addIssueToRemark(issue) {
+                    if (!this.editForm.remark) {
+                        this.editForm.remark = issue;
+                    } else if (this.editForm.remark.includes(issue)) {
+                        // 如果已存在，不重复添加
+                        return;
+                    } else {
+                        this.editForm.remark += '，' + issue;
+                    }
+                },
+                handleEditBrandChange() {
+                    const brand = this.editForm.brand;
+                    const seriesSet = new Set();
+                    this.typesList.forEach(item => {
+                        if (item.brand === brand) {
+                            seriesSet.add(item.series);
+                        }
+                    });
+                    this.seriesList = Array.from(seriesSet);
+                    this.modelList = [];
+                },
+                handleEditSeriesChange() {
+                    const brand = this.editForm.brand;
+                    const series = this.editForm.series;
+                    const modelSet = new Set();
+                    this.typesList.forEach(item => {
+                        if (item.brand === brand && item.series === series) {
+                            modelSet.add(item.model);
+                        }
+                    });
+                    this.modelList = Array.from(modelSet);
+                },
+                fetchStatistics() {
+                    axios.post('/API/quality.php', {
+                        action: 'statistics',
+                        token: localStorage.getItem('token')
+                    })
+                    .then(response => {
+                        if (response.data.code === 200) {
+                            this.statistics = response.data.data;
+                        }else if(response.data.code === 401){
+                            window.location.href = 'login.html';
+                        }
+                    })
+                },
+                fetchPhones() {
+                    axios.post('/API/quality.php', {
+                        action: 'get',
+                        token: localStorage.getItem('token'),
+                        machine_code: this.searchQuery,
+                        brand: this.filterForm.brand,
+                        series: this.filterForm.series,
+                        model: this.filterForm.model
+                    })
+                    .then(response => {
+                        if (response.data.code === 200) {
+                            this.phoneList = response.data.data;
+                            this.total = response.data.data.length;
+                        }else if(response.data.code === 401){
+                            window.location.href = 'login.html';
+                        } else {
+                            this.$message.error(response.data.msg);
+                        }
+                    })
+                    .catch(error => {
+                        this.$message.error('获取数据失败');
+                        console.error(error);
+                    });
+                },
+                fetchTypes() {
+                    axios.post('/API/types.php', {
+                        action: 'get',
+                        token: localStorage.getItem('token')
+                    })
+                    .then(response => {
+                        if (response.data.code === 200) {
+                            this.typesList = response.data.data;
+                            const brandSet = new Set();
+                            this.typesList.forEach(item => {
+                                brandSet.add(item.brand);
+                            });
+                            this.brands = Array.from(brandSet);
+                        }
+                    })
+                },
+                fetchSystemConfig() {
+                    axios.post('/API/system.php', {
+                        action: 'get',
+                        token: localStorage.getItem('token')
+                    })
+                    .then(response => {
+                        if (response.data.code === 200) {
+                            const config = response.data.data;
+                            if (config) {
+                                const system = config;
+                                if (system.color_system) {
+                                    const colorData = JSON.parse(system.color_system);
+                                    this.colorList = colorData.color || [];
+                                }
+                                if (system.platform_system) {
+                                    const platformData = JSON.parse(system.platform_system);
+                                    this.platformList = platformData.platform || [];
+                                }
+                                if (system.storage_system) {
+                                    const storageData = JSON.parse(system.storage_system);
+                                    this.storageList = storageData.storage || [];
+                                }
+                            }
+                        }
+                    })
+                },
+                search() {
+                    this.currentPage = 1;
+                    this.fetchPhones();
+                },
+                applyFilter() {
+                    this.currentPage = 1;
+                    this.fetchPhones();
+                },
+                resetFilter() {
+                    this.filterForm = {
+                        brand: '',
+                        series: '',
+                        model: ''
+                    };
+                    this.currentPage = 1;
+                    this.fetchPhones();
+                },
+                openEditDialog(row) {
+
+                    this.editForm = { 
+                        ...row,
+                        courier_company: row.courier_company || '顺丰速运',
+                        tracking_id: row.tracking_id || '',
+                        express_type: row.express_type || '采购',
+                        express_postage: row.express_postage || 0,
+                        brand: row.brand || '',
+                        series: row.series || '',
+                        model: row.model || '',
+                        postage: row.postage || 0,
+                        delivery_time: row.delivery_time || '',
+                        courier_address: row.courier_address || '',
+                        matching: row.matching || 1,
+                        remark: row.remark
+                    };
+                    //延时加载编辑表单，确保数据加载完成
+                    setTimeout(() => {
+                        this.editDialogVisible = true;
+                    }, 200);
+                },
+                updatePhone() {
+                    const phoneData = {
+                        action: 'update',
+                        token: localStorage.getItem('token'),
+                        wid: this.editForm.wid,
+                        machine_code: this.editForm.machine_code,
+                        acquisition_time: this.editForm.acquisition_time,
+                        brand: this.editForm.brand,
+                        series: this.editForm.series,
+                        model: this.editForm.model,
+                        storage: this.editForm.storage,
+                        color: this.editForm.color,
+                        battery: this.editForm.battery,
+                        acquisition_platform: this.editForm.acquisition_platform,
+                        purchase_price: this.editForm.purchase_price,
+                        repair: this.editForm.repair,
+                        matching: this.editForm.matching,
+                        cost: this.editFormCost,
+                        postage: this.editForm.postage,
+                        profit: this.editFormProfit,
+                        state: this.editForm.state,
+                        remark: this.editForm.remark
+                    };
+                    
+                    axios.post('/API/quality.php', phoneData)
+                    .then(response => {
+                        if (response.data.code === 200) {
+                            this.$message.success('更新成功');
+                            this.editDialogVisible = false;
+                            this.fetchStatistics();
+                            this.fetchPhones();
+                        } else {
+                            this.$message.error(response.data.msg);
+                        }
+                    })
+                    .catch(error => {
+                        this.$message.error('更新失败');
+                        console.error(error);
+                    });
+                },
+                handlePageChange(page) {
+                    this.currentPage = page;
+                }
+            }
+        });
+    </script>
+</body>
+</html>

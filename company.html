@@ -1,0 +1,1632 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>企业管理</title>
+    <link rel="stylesheet" href="style/css/element-ui.css">
+    <style>
+        
+        * {
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background-color: #f5f5f5;
+            padding: 20px;
+        }
+        .company-container {
+            max-width: 1500px;
+            margin: 0 auto;
+        }
+        .section-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            margin: 20px 0 15px 0;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #409EFF;
+        }
+        .table-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+        .table-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 15px;
+        }
+        .operation-bar {
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .el-table {
+            margin-bottom: 20px;
+        }
+        .dialog-form {
+            width: 500px;
+        }
+        .json-editor {
+            width: 100%;
+            height: 300px;
+            border: 1px solid #eaeaea;
+            border-radius: 4px;
+            padding: 10px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .el-input__inner{
+            width: auto;
+        }
+        .company-container{
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="company-container" :style="wait">
+            <h1 style="text-align: center; color: #409EFF; margin-bottom: 30px;">企业管理</h1>
+            
+            <el-tabs v-model="activeTab">
+                
+                <!-- 企业管理 -->
+                <el-tab-pane label="企业管理" name="company">
+                    <div class="table-container">
+                        <div class="operation-bar">
+                            <h3 class="table-title">企业列表</h3>
+                        </div>
+                        <el-table :data="companies" stripe style="width: 100%">
+                            <el-table-column prop="cid" label="企业 ID"></el-table-column>
+                            <el-table-column prop="company_name" label="企业名称"></el-table-column>
+                            <el-table-column prop="uid" label="创建者 ID"></el-table-column>
+                            <el-table-column prop="state" label="状态">
+                                <template slot-scope="scope">
+                                    <span>{{ scope.row.state == 1 ? '正常' : '关闭' }}</span>
+                                </template>
+                            </el-table-column>
+                            <el-table-column prop="vip_date" label="会员到期日期"></el-table-column>
+                            <el-table-column label="操作" width="150">
+                                <template slot-scope="scope">
+                                    <el-button size="small" type="primary" @click="openEditCompanyDialog(scope.row)">编辑</el-button>
+                                </template>
+                            </el-table-column>
+                        </el-table>
+                    </div>
+                </el-tab-pane>
+
+
+                <!-- 店铺管理 -->
+                <el-tab-pane label="店铺管理" name="shop">
+                    <div class="table-container">
+                        <div class="operation-bar">
+                            <h3 class="table-title">店铺列表</h3>
+                            <el-button type="primary" @click="openAddShopDialog">添加店铺</el-button>
+                        </div>
+                        <el-table :data="shops" stripe style="width: 100%">
+                            <el-table-column prop="sid" label="店铺ID" width="80"></el-table-column>
+                            <el-table-column prop="shop_name" label="店铺名称"></el-table-column>
+                            <el-table-column prop="platform" label="运营平台"></el-table-column>
+                            <el-table-column prop="state" label="状态" width="100">
+                                <template slot-scope="scope">
+                                    <span>{{ scope.row.state === 1 ? '正常' : '关闭' }}</span>
+                                </template>
+                            </el-table-column>
+                            <el-table-column label="操作" width="150">
+                                <template slot-scope="scope">
+                                    <el-button size="small" type="primary" @click="openEditShopDialog(scope.row)">编辑</el-button>
+                                    <el-button size="small" type="danger" @click="deleteShop(scope.row.sid)">删除</el-button>
+                                </template>
+                            </el-table-column>
+                        </el-table>
+                    </div>
+                </el-tab-pane>
+                
+                <!-- 用户管理 -->
+                <el-tab-pane label="用户管理" name="user">
+                    <div class="table-container">
+                        <div class="operation-bar">
+                            <h3 class="table-title">用户列表</h3>
+                            <div>
+                                <el-button type="success" @click="openAddExistingUserDialog">添加已有用户</el-button>
+                                <el-button type="primary" @click="openAddUserDialog">添加用户</el-button>
+                            </div>
+                        </div>
+                        <el-table :data="users" stripe style="width: 100%">
+                            <el-table-column prop="uid" label="用户 ID" width="80"></el-table-column>
+                            <el-table-column prop="username" label="用户名"></el-table-column>
+                            <el-table-column prop="email" label="邮箱"></el-table-column>
+                            <el-table-column prop="mobile_phone" label="手机号"></el-table-column>
+                            <el-table-column prop="authority" label="权限"></el-table-column>
+                            <el-table-column prop="state" label="状态" width="100">
+                                <template slot-scope="scope">
+                                    <span>{{ scope.row.state === 1 ? '正常' : '关闭' }}</span>
+                                </template>
+                            </el-table-column>
+                            <el-table-column label="操作" width="150">
+                                <template slot-scope="scope">
+                                    <el-button size="small" type="primary" @click="openEditUserDialog(scope.row)">编辑</el-button>
+                                    <el-button size="small" type="danger" @click="deleteUser(scope.row.uid)">删除</el-button>
+                                </template>
+                            </el-table-column>
+                        </el-table>
+                    </div>
+                </el-tab-pane>
+                
+                <!-- 颜色配置 -->
+                <el-tab-pane label="颜色配置" name="color">
+                    <div class="table-container">
+                        <div class="operation-bar">
+                            <h3 class="table-title">颜色配置</h3>
+                            <div>
+                                <el-button type="primary" @click="saveSystemConfig">保存配置</el-button>
+                            </div>
+                        </div>
+                        <el-button type="success" size="small" @click="openAddColorDialog" style="margin-bottom: 10px;">添加颜色</el-button>
+                        <el-table :data="colorList" stripe style="width: 100%">
+                            <el-table-column label="颜色 1">
+                                <template slot-scope="scope">
+                                    <span v-if="scope.$index * 2 < colorList.length">{{ colorList[scope.$index * 2].value }}</span>
+                                </template>
+                            </el-table-column>
+                            <el-table-column label="操作 1">
+                                <template slot-scope="scope">
+                                    <el-button v-if="scope.$index * 2 < colorList.length" size="small" type="primary" @click="openEditColorDialog(colorList[scope.$index * 2])">编辑</el-button>
+                                    <el-button v-if="scope.$index * 2 < colorList.length" size="small" type="danger" @click="deleteColor(colorList[scope.$index * 2])">删除</el-button>
+                                </template>
+                            </el-table-column>
+                            <el-table-column label="颜色 2">
+                                <template slot-scope="scope">
+                                    <span v-if="scope.$index * 2 + 1 < colorList.length">{{ colorList[scope.$index * 2 + 1].value }}</span>
+                                </template>
+                            </el-table-column>
+                            <el-table-column label="操作 2">
+                                <template slot-scope="scope">
+                                    <el-button v-if="scope.$index * 2 + 1 < colorList.length" size="small" type="primary" @click="openEditColorDialog(colorList[scope.$index * 2 + 1])">编辑</el-button>
+                                    <el-button v-if="scope.$index * 2 + 1 < colorList.length" size="small" type="danger" @click="deleteColor(colorList[scope.$index * 2 + 1])">删除</el-button>
+                                </template>
+                            </el-table-column>
+                        </el-table>
+                    </div>
+                </el-tab-pane>
+                
+                <!-- 品牌+系列配置 -->
+                <el-tab-pane label="品牌系列配置" name="brand">
+                    <div class="table-container">
+                        <div class="operation-bar">
+                            <h3 class="table-title">品牌系列配置</h3>
+                            <div>
+                                <!-- <el-button type="info" @click="resetDefaultConfig">重置默认配置</el-button> -->
+                                <el-button type="primary" @click="saveSystemConfig">保存配置</el-button>
+                            </div>
+                        </div>
+                        <el-button type="success" size="small" @click="openAddBrandDialog" style="margin-bottom: 10px;">添加品牌</el-button>
+                        <el-table :data="brandList" stripe style="width: 100%">
+                            <el-table-column prop="brand" label="品牌"></el-table-column>
+                            <el-table-column label="系列" >
+                                <template slot-scope="scope">
+                                    <span v-for="(series, index) in scope.row.series" :key="index" style="margin-right: 10px;">{{ series.value }}</span>
+                                </template>
+                            </el-table-column>
+                            <el-table-column label="操作">
+                                <template slot-scope="scope">
+                                    <el-button size="small" type="primary" @click="openEditBrandDialog(scope.row)">编辑</el-button>
+                                    <el-button size="small" type="danger" @click="deleteBrand(scope.row)">删除</el-button>
+                                </template>
+                            </el-table-column>
+                        </el-table>
+                    </div>
+                </el-tab-pane>
+                
+                <!-- 平台配置 -->
+                <el-tab-pane label="平台配置" name="platform">
+                    <div class="table-container">
+                        <div class="operation-bar">
+                            <h3 class="table-title">平台配置</h3>
+                            <div>
+                                <!-- <el-button type="info" @click="resetDefaultConfig">重置默认配置</el-button> -->
+                                <el-button type="primary" @click="saveSystemConfig">保存配置</el-button>
+                            </div>
+                        </div>
+                        <el-button type="success" size="small" @click="openAddPlatformDialog" style="margin-bottom: 10px;">添加平台</el-button>
+                        <el-table :data="platformList" stripe style="width: 100%">
+                            <el-table-column prop="value" label="平台名称"></el-table-column>
+                            <el-table-column label="操作">
+                                <template slot-scope="scope">
+                                    <el-button size="small" type="primary" @click="openEditPlatformDialog(scope.row)">编辑</el-button>
+                                    <el-button size="small" type="danger" @click="deletePlatform(scope.row)">删除</el-button>
+                                </template>
+                            </el-table-column>
+                        </el-table>
+                    </div>
+                </el-tab-pane>
+                
+                <!-- 存储配置 -->
+                <el-tab-pane label="存储配置" name="storage">
+                    <div class="table-container">
+                        <div class="operation-bar">
+                            <h3 class="table-title">存储配置</h3>
+                            <div>
+                                <el-button type="primary" @click="saveSystemConfig">保存配置</el-button>
+                            </div>
+                        </div>
+                        <el-button type="success" size="small" @click="openAddStorageDialog" style="margin-bottom: 10px;">添加存储</el-button>
+                        <el-table :data="storageList" stripe style="width: 100%">
+                            <el-table-column label="存储 1">
+                                <template slot-scope="scope">
+                                    <span v-if="scope.$index * 2 < storageList.length">{{ storageList[scope.$index * 2].value }}</span>
+                                </template>
+                            </el-table-column>
+                            <el-table-column label="操作 1">
+                                <template slot-scope="scope">
+                                    <el-button v-if="scope.$index * 2 < storageList.length" size="small" type="primary" @click="openEditStorageDialog(storageList[scope.$index * 2])">编辑</el-button>
+                                    <el-button v-if="scope.$index * 2 < storageList.length" size="small" type="danger" @click="deleteStorage(storageList[scope.$index * 2])">删除</el-button>
+                                </template>
+                            </el-table-column>
+                            <el-table-column label="存储 2">
+                                <template slot-scope="scope">
+                                    <span v-if="scope.$index * 2 + 1 < storageList.length">{{ storageList[scope.$index * 2 + 1].value }}</span>
+                                </template>
+                            </el-table-column>
+                            <el-table-column label="操作 2">
+                                <template slot-scope="scope">
+                                    <el-button v-if="scope.$index * 2 + 1 < storageList.length" size="small" type="primary" @click="openEditStorageDialog(storageList[scope.$index * 2 + 1])">编辑</el-button>
+                                    <el-button v-if="scope.$index * 2 + 1 < storageList.length" size="small" type="danger" @click="deleteStorage(storageList[scope.$index * 2 + 1])">删除</el-button>
+                                </template>
+                            </el-table-column>
+                        </el-table>
+                    </div>
+                </el-tab-pane>
+                
+                <!-- 快递公司配置 -->
+                <el-tab-pane label="快递公司配置" name="express">
+                    <div class="table-container">
+                        <div class="operation-bar">
+                            <h3 class="table-title">快递公司配置</h3>
+                            <div>
+                                <el-button type="primary" @click="saveSystemConfig">保存配置</el-button>
+                            </div>
+                        </div>
+                        <el-button type="success" size="small" @click="openAddExpressDialog" style="margin-bottom: 10px;">添加快递公司</el-button>
+                        <el-table :data="expressList" stripe style="width: 100%">
+                            <el-table-column label="快递 1">
+                                <template slot-scope="scope">
+                                    <span v-if="scope.$index * 2 < expressList.length">{{ expressList[scope.$index * 2].value }}</span>
+                                </template>
+                            </el-table-column>
+                            <el-table-column label="操作 1">
+                                <template slot-scope="scope">
+                                    <el-button v-if="scope.$index * 2 < expressList.length" size="small" type="primary" @click="openEditExpressDialog(expressList[scope.$index * 2])">编辑</el-button>
+                                    <el-button v-if="scope.$index * 2 < expressList.length" size="small" type="danger" @click="deleteExpress(expressList[scope.$index * 2])">删除</el-button>
+                                </template>
+                            </el-table-column>
+                            <el-table-column label="快递 2">
+                                <template slot-scope="scope">
+                                    <span v-if="scope.$index * 2 + 1 < expressList.length">{{ expressList[scope.$index * 2 + 1].value }}</span>
+                                </template>
+                            </el-table-column>
+                            <el-table-column label="操作 2">
+                                <template slot-scope="scope">
+                                    <el-button v-if="scope.$index * 2 + 1 < expressList.length" size="small" type="primary" @click="openEditExpressDialog(expressList[scope.$index * 2 + 1])">编辑</el-button>
+                                    <el-button v-if="scope.$index * 2 + 1 < expressList.length" size="small" type="danger" @click="deleteExpress(expressList[scope.$index * 2 + 1])">删除</el-button>
+                                </template>
+                            </el-table-column>
+                        </el-table>
+                    </div>
+                </el-tab-pane>
+                
+            </el-tabs>
+        </div>
+        
+        <!-- 添加店铺对话框 -->
+        <el-dialog title="添加店铺" :visible.sync="addShopDialogVisible" width="600px">
+            <el-form :model="shopForm" label-width="120px" class="dialog-form">
+                <el-form-item label="店铺名称">
+                    <el-input v-model="shopForm.shop_name"></el-input>
+                </el-form-item>
+                <el-form-item label="运营平台">
+                    <el-input v-model="shopForm.platform"></el-input>
+                </el-form-item>
+                <el-form-item label="状态">
+                    <el-select v-model="shopForm.state" placeholder="请选择状态">
+                        <el-option label="正常" value="1"></el-option>
+                        <el-option label="关闭" value="0"></el-option>
+                    </el-select>
+                </el-form-item>
+            </el-form>
+            <span slot="footer" class="dialog-footer">
+                <el-button @click="addShopDialogVisible = false">取消</el-button>
+                <el-button type="primary" @click="addShop">确定</el-button>
+            </span>
+        </el-dialog>
+        
+        <!-- 编辑店铺对话框 -->
+        <el-dialog title="编辑店铺" :visible.sync="editShopDialogVisible" width="500px">
+            <el-form :model="shopForm" label-width="120px" class="dialog-form">
+                <el-form-item label="店铺名称">
+                    <el-input v-model="shopForm.shop_name"></el-input>
+                </el-form-item>
+                <el-form-item label="运营平台">
+                    <el-input v-model="shopForm.platform"></el-input>
+                </el-form-item>
+                <el-form-item label="状态">
+                    <el-select v-model="shopForm.state" placeholder="请选择状态">
+                        <el-option label="正常" value="1"></el-option>
+                        <el-option label="关闭" value="0"></el-option>
+                    </el-select>
+                </el-form-item>
+            </el-form>
+            <span slot="footer" class="dialog-footer">
+                <el-button @click="editShopDialogVisible = false">取消</el-button>
+                <el-button type="primary" @click="updateShop">确定</el-button>
+            </span>
+        </el-dialog>
+        
+        <!-- 添加已有用户对话框 -->
+        <el-dialog title="添加已有用户" :visible.sync="addExistingUserDialogVisible" width="600px">
+            <div style="margin-bottom: 15px;">
+                <el-alert
+                    title="提示"
+                    type="info"
+                    :closable="false"
+                    show-icon>
+                    选择已注册但未加入本企业的用户，将其添加到当前企业
+                </el-alert>
+            </div>
+            <el-table :data="availableUsers" stripe @selection-change="handleSelectionChange" style="width: 100%">
+                <el-table-column type="selection" width="55"></el-table-column>
+                <el-table-column prop="uid" label="用户 ID" width="80"></el-table-column>
+                <el-table-column prop="username" label="用户名"></el-table-column>
+                <el-table-column prop="email" label="邮箱"></el-table-column>
+                <el-table-column prop="mobile_phone" label="手机号"></el-table-column>
+                <el-table-column prop="state" label="状态" width="80">
+                    <template slot-scope="scope">
+                        <span>{{ scope.row.state === 1 ? '正常' : '关闭' }}</span>
+                    </template>
+                </el-table-column>
+            </el-table>
+            <span slot="footer" class="dialog-footer">
+                <el-button @click="addExistingUserDialogVisible = false">取消</el-button>
+                <el-button type="primary" @click="addExistingUser" :disabled="selectedUsers.length === 0">确定</el-button>
+            </span>
+        </el-dialog>
+        
+        <!-- 添加用户对话框 -->
+        <el-dialog title="添加用户" :visible.sync="addUserDialogVisible" width="600px">
+            <el-form :model="userForm" label-width="120px" class="dialog-form">
+                <el-form-item label="用户名">
+                    <el-input v-model="userForm.username"></el-input>
+                </el-form-item>
+                <el-form-item label="密码">
+                    <el-input v-model="userForm.password" type="password"></el-input>
+                </el-form-item>
+                <el-form-item label="邮箱">
+                    <el-input v-model="userForm.email"></el-input>
+                </el-form-item>
+                <el-form-item label="手机号">
+                    <el-input v-model="userForm.mobile_phone"></el-input>
+                </el-form-item>
+                <el-form-item label="权限">
+                    <el-input v-model="userForm.authority"></el-input>
+                </el-form-item>
+                <el-form-item label="状态">
+                    <el-select v-model="userForm.state" placeholder="请选择状态">
+                        <el-option label="正常" value="1"></el-option>
+                        <el-option label="关闭" value="0"></el-option>
+                    </el-select>
+                </el-form-item>
+            </el-form>
+            <span slot="footer" class="dialog-footer">
+                <el-button @click="addUserDialogVisible = false">取消</el-button>
+                <el-button type="primary" @click="addUser">确定</el-button>
+            </span>
+        </el-dialog>
+        
+        <!-- 编辑用户对话框 -->
+        <el-dialog title="编辑用户" :visible.sync="editUserDialogVisible" width="600px">
+            <el-form :model="userForm" label-width="120px" class="dialog-form">
+                <el-form-item label="用户名">
+                    <el-input v-model="userForm.username" disabled></el-input>
+                </el-form-item>
+                <el-form-item label="密码">
+                    <el-input v-model="userForm.password" type="password" placeholder="留空则不修改密码"></el-input>
+                </el-form-item>
+                <el-form-item label="邮箱">
+                    <el-input v-model="userForm.email"></el-input>
+                </el-form-item>
+                <el-form-item label="手机号">
+                    <el-input v-model="userForm.mobile_phone"></el-input>
+                </el-form-item>
+                <el-form-item label="权限">
+                    <el-input v-model="userForm.authority"></el-input>
+                </el-form-item>
+                <el-form-item label="状态">
+                    <el-select v-model="userForm.state" placeholder="请选择状态">
+                        <el-option label="正常" value="1"></el-option>
+                        <el-option label="关闭" value="0"></el-option>
+                    </el-select>
+                </el-form-item>
+            </el-form>
+            <span slot="footer" class="dialog-footer">
+                <el-button @click="editUserDialogVisible = false">取消</el-button>
+                <el-button type="primary" @click="updateUser">确定</el-button>
+            </span>
+        </el-dialog>
+        
+        <!-- 添加颜色对话框 -->
+        <el-dialog title="添加颜色" :visible.sync="addColorDialogVisible" width="500px">
+            <el-form :model="colorForm" label-width="120px" class="dialog-form">
+                <el-form-item label="颜色名称">
+                    <el-input v-model="colorForm.value"></el-input>
+                </el-form-item>
+            </el-form>
+            <span slot="footer" class="dialog-footer">
+                <el-button @click="addColorDialogVisible = false">取消</el-button>
+                <el-button type="primary" @click="addColor">确定</el-button>
+            </span>
+        </el-dialog>
+        
+        <!-- 编辑颜色对话框 -->
+        <el-dialog title="编辑颜色" :visible.sync="editColorDialogVisible" width="500px">
+            <el-form :model="colorForm" label-width="120px" class="dialog-form">
+                <el-form-item label="颜色名称">
+                    <el-input v-model="colorForm.value"></el-input>
+                </el-form-item>
+            </el-form>
+            <span slot="footer" class="dialog-footer">
+                <el-button @click="editColorDialogVisible = false">取消</el-button>
+                <el-button type="primary" @click="updateColor">确定</el-button>
+            </span>
+        </el-dialog>
+        
+        <!-- 添加品牌对话框 -->
+        <el-dialog title="添加品牌" :visible.sync="addBrandDialogVisible" width="600px">
+            <el-form :model="brandForm" label-width="120px" class="dialog-form">
+                <el-form-item label="品牌名称">
+                    <el-input v-model="brandForm.brand"></el-input>
+                </el-form-item>
+                <el-form-item label="系列">
+                    <div style="margin-bottom: 10px;">
+                        <el-button type="success" size="small" @click="openAddSeriesDialog">添加系列</el-button>
+                    </div>
+                    <el-table :data="brandForm.series" stripe style="width: 100%" max-height="300">
+                        <el-table-column prop="value" label="系列名称"></el-table-column>
+                        <el-table-column label="操作">
+                            <template slot-scope="scope">
+                                <el-button size="small" type="primary" @click="openEditSeriesDialog(scope.row)">编辑</el-button>
+                                <el-button size="small" type="danger" @click="removeBrandSeriesFromTable(scope.$index)">删除</el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                </el-form-item>
+            </el-form>
+            <span slot="footer" class="dialog-footer">
+                <el-button @click="addBrandDialogVisible = false">取消</el-button>
+                <el-button type="primary" @click="addBrand">确定</el-button>
+            </span>
+        </el-dialog>
+        
+        <!-- 编辑品牌对话框 -->
+        <el-dialog title="编辑品牌" :visible.sync="editBrandDialogVisible" width="600px">
+            <el-form :model="brandForm" label-width="120px" class="dialog-form">
+                <el-form-item label="品牌名称">
+                    <el-input v-model="brandForm.brand"></el-input>
+                </el-form-item>
+                <el-form-item label="系列">
+                    <div style="margin-bottom: 10px;">
+                        <el-button type="success" size="small" @click="openAddSeriesDialog">添加系列</el-button>
+                    </div>
+                    <el-table :data="brandForm.series" stripe style="width: 100%" max-height="300">
+                        <el-table-column prop="value" label="系列名称"></el-table-column>
+                        <el-table-column label="操作" >
+                            <template slot-scope="scope">
+                                <el-button size="small" type="primary" @click="openEditSeriesDialog(scope.row)">编辑</el-button>
+                                <el-button size="small" type="danger" @click="removeBrandSeriesFromTable(scope.$index)">删除</el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                </el-form-item>
+            </el-form>
+            <span slot="footer" class="dialog-footer">
+                <el-button @click="editBrandDialogVisible = false">取消</el-button>
+                <el-button type="primary" @click="updateBrand">确定</el-button>
+            </span>
+        </el-dialog>
+        
+        <!-- 添加系列对话框 -->
+        <el-dialog title="添加系列" :visible.sync="addSeriesDialogVisible" width="500px">
+            <el-form :model="seriesForm" label-width="120px" class="dialog-form">
+                <el-form-item label="系列名称">
+                    <el-input v-model="seriesForm.value"></el-input>
+                </el-form-item>
+            </el-form>
+            <span slot="footer" class="dialog-footer">
+                <el-button @click="addSeriesDialogVisible = false">取消</el-button>
+                <el-button type="primary" @click="addSeries">确定</el-button>
+            </span>
+        </el-dialog>
+        
+        <!-- 编辑系列对话框 -->
+        <el-dialog title="编辑系列" :visible.sync="editSeriesDialogVisible" width="500px">
+            <el-form :model="seriesForm" label-width="120px" class="dialog-form">
+                <el-form-item label="系列名称">
+                    <el-input v-model="seriesForm.value"></el-input>
+                </el-form-item>
+            </el-form>
+            <span slot="footer" class="dialog-footer">
+                <el-button @click="editSeriesDialogVisible = false">取消</el-button>
+                <el-button type="primary" @click="updateSeries">确定</el-button>
+            </span>
+        </el-dialog>
+        
+        <!-- 添加平台对话框 -->
+        <el-dialog title="添加平台" :visible.sync="addPlatformDialogVisible" width="500px">
+            <el-form :model="platformForm" label-width="120px" class="dialog-form">
+                <el-form-item label="平台名称">
+                    <el-input v-model="platformForm.value"></el-input>
+                </el-form-item>
+            </el-form>
+            <span slot="footer" class="dialog-footer">
+                <el-button @click="addPlatformDialogVisible = false">取消</el-button>
+                <el-button type="primary" @click="addPlatform">确定</el-button>
+            </span>
+        </el-dialog>
+        
+        <!-- 编辑平台对话框 -->
+        <el-dialog title="编辑平台" :visible.sync="editPlatformDialogVisible" width="500px">
+            <el-form :model="platformForm" label-width="120px" class="dialog-form">
+                <el-form-item label="平台名称">
+                    <el-input v-model="platformForm.value"></el-input>
+                </el-form-item>
+            </el-form>
+            <span slot="footer" class="dialog-footer">
+                <el-button @click="editPlatformDialogVisible = false">取消</el-button>
+                <el-button type="primary" @click="updatePlatform">确定</el-button>
+            </span>
+        </el-dialog>
+        
+        <!-- 添加存储对话框 -->
+        <el-dialog title="添加存储" :visible.sync="addStorageDialogVisible" width="500px">
+            <el-form :model="storageForm" label-width="120px" class="dialog-form">
+                <el-form-item label="存储容量">
+                    <el-input v-model="storageForm.value"></el-input>
+                </el-form-item>
+            </el-form>
+            <span slot="footer" class="dialog-footer">
+                <el-button @click="addStorageDialogVisible = false">取消</el-button>
+                <el-button type="primary" @click="addStorage">确定</el-button>
+            </span>
+        </el-dialog>
+        
+        <!-- 编辑存储对话框 -->
+        <el-dialog title="编辑存储" :visible.sync="editStorageDialogVisible" width="500px">
+            <el-form :model="storageForm" label-width="120px" class="dialog-form">
+                <el-form-item label="存储容量">
+                    <el-input v-model="storageForm.value"></el-input>
+                </el-form-item>
+            </el-form>
+            <span slot="footer" class="dialog-footer">
+                <el-button @click="editStorageDialogVisible = false">取消</el-button>
+                <el-button type="primary" @click="updateStorageConfig">确定</el-button>
+            </span>
+        </el-dialog>
+        
+        <!-- 添加快递公司对话框 -->
+        <el-dialog title="添加快递公司" :visible.sync="addExpressDialogVisible" width="500px">
+            <el-form :model="expressForm" label-width="120px" class="dialog-form">
+                <el-form-item label="快递公司">
+                    <el-input v-model="expressForm.value"></el-input>
+                </el-form-item>
+            </el-form>
+            <span slot="footer" class="dialog-footer">
+                <el-button @click="addExpressDialogVisible = false">取消</el-button>
+                <el-button type="primary" @click="addExpress">确定</el-button>
+            </span>
+        </el-dialog>
+        
+        <!-- 编辑快递公司对话框 -->
+        <el-dialog title="编辑快递公司" :visible.sync="editExpressDialogVisible" width="500px">
+            <el-form :model="expressForm" label-width="120px" class="dialog-form">
+                <el-form-item label="快递公司">
+                    <el-input v-model="expressForm.value"></el-input>
+                </el-form-item>
+            </el-form>
+            <span slot="footer" class="dialog-footer">
+                <el-button @click="editExpressDialogVisible = false">取消</el-button>
+                <el-button type="primary" @click="updateExpress">确定</el-button>
+            </span>
+        </el-dialog>
+        
+        <!-- 编辑企业对话框 -->
+        <el-dialog title="编辑企业" :visible.sync="editCompanyDialogVisible" width="500px">
+            <el-form :model="companyForm" label-width="120px" class="dialog-form">
+                <el-form-item label="企业名称">
+                    <el-input v-model="companyForm.company_name"></el-input>
+                </el-form-item>
+                <el-form-item label="状态">
+                    <el-select v-model="companyForm.state" placeholder="请选择状态">
+                        <el-option label="正常" :value="1"></el-option>
+                        <el-option label="关闭" :value="0"></el-option>
+                    </el-select>
+                </el-form-item>
+            </el-form>
+            <span slot="footer" class="dialog-footer">
+                <el-button @click="editCompanyDialogVisible = false">取消</el-button>
+                <el-button type="primary" @click="updateCompany">确定</el-button>
+            </span>
+        </el-dialog>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="style/js/vue.min.js"></script>
+    <script src="style/js/element-ui.js"></script>
+    <script src="style/js/axios.min.js"></script>
+    <script>
+        new Vue({
+            el: '#app',
+            data() {
+                return {
+                    wait:'display:block;',
+                    activeTab: 'shop',
+                    shops: [],
+                    users: [],
+                    companies: [],
+                    systemConfig: {
+                        color_system: '',
+                        brand_system: '',
+                        platform_system: '',
+                        storage_system: '',
+                        express_system: ''
+                    },
+                    // 配置列表
+                    colorList: [],
+                    brandList: [],
+                    platformList: [],
+                    storageList: [],
+                    expressList: [],
+                    // 表单数据
+                    colorForm: {
+                        value: ''
+                    },
+                    brandForm: {
+                        brand: '',
+                        series: []
+                    },
+                    brandSeriesInput: '',
+                    seriesForm: {
+                        value: ''
+                    },
+                    platformForm: {
+                        value: ''
+                    },
+                    storageForm: {
+                        value: ''
+                    },
+                    expressForm: {
+                        value: ''
+                    },
+                    companyForm: {
+                        cid: '',
+                        company_name: '',
+                        uid: '',
+                        state: 1
+                    },
+                    // 对话框状态
+                    addShopDialogVisible: false,
+                    editShopDialogVisible: false,
+                    addUserDialogVisible: false,
+                    editUserDialogVisible: false,
+                    addExistingUserDialogVisible: false,
+                    availableUsers: [],
+                    selectedUsers: [],
+                    addColorDialogVisible: false,
+                    editColorDialogVisible: false,
+                    addBrandDialogVisible: false,
+                    editBrandDialogVisible: false,
+                    addSeriesDialogVisible: false,
+                    editSeriesDialogVisible: false,
+                    addPlatformDialogVisible: false,
+                    editPlatformDialogVisible: false,
+                    addStorageDialogVisible: false,
+                    editStorageDialogVisible: false,
+                    addExpressDialogVisible: false,
+                    editExpressDialogVisible: false,
+                    editCompanyDialogVisible: false,
+                    // 其他数据
+                    shopForm: {
+                        sid: '',
+                        shop_name: '',
+                        platform: '',
+                        state: 1
+                    },
+                    userForm: {
+                        uid: '',
+                        username: '',
+                        password: '',
+                        email: '',
+                        mobile_phone: '',
+                        authority: '',
+                        state: 1
+                    }
+                };
+            },
+            mounted() {
+                this.fetchShops();
+                this.fetchUsers();
+                this.fetchSystemConfig();
+                this.fetchCompanies();
+            },
+            watch: {
+                systemConfig: {
+                    handler() {
+                        this.parseConfig();
+                    },
+                    deep: true
+                }
+            },
+            methods: {
+                // 解析配置
+                parseConfig() {
+                    // 解析颜色配置
+                    try {
+                        if (this.systemConfig.color_system) {
+                            const colorData = JSON.parse(this.systemConfig.color_system);
+                            this.colorList = colorData.color.map(color => ({ value: color }));
+                        } else {
+                            this.colorList = [];
+                        }
+                    } catch (e) {
+                        this.colorList = [];
+                    }
+                    
+                    // 解析品牌配置
+                    try {
+                        if (this.systemConfig.brand_system) {
+                            const brandData = JSON.parse(this.systemConfig.brand_system);
+                            this.brandList = brandData.brand.map(item => {
+                                const brand = Object.keys(item)[0];
+                                return {
+                                    brand: brand,
+                                    series: item[brand].map(series => ({ value: series }))
+                                };
+                            });
+                        } else {
+                            this.brandList = [];
+                        }
+                    } catch (e) {
+                        this.brandList = [];
+                    }
+                    
+                    // 解析平台配置
+                    try {
+                        if (this.systemConfig.platform_system) {
+                            const platformData = JSON.parse(this.systemConfig.platform_system);
+                            this.platformList = platformData.platform.map(platform => ({ value: platform }));
+                        } else {
+                            this.platformList = [];
+                        }
+                    } catch (e) {
+                        this.platformList = [];
+                    }
+                    
+                    // 解析存储配置
+                    try {
+                        if (this.systemConfig.storage_system) {
+                            const storageData = JSON.parse(this.systemConfig.storage_system);
+                            this.storageList = storageData.storage.map(storage => ({ value: storage }));
+                        } else {
+                            this.storageList = [];
+                        }
+                    } catch (e) {
+                        this.storageList = [];
+                    }
+                    
+                    // 解析快递公司配置
+                    try {
+                        if (this.systemConfig.express_system) {
+                            const expressData = JSON.parse(this.systemConfig.express_system);
+                            this.expressList = expressData.express.map(express => ({ value: express }));
+                        } else {
+                            this.expressList = [];
+                        }
+                    } catch (e) {
+                        this.expressList = [];
+                    }
+                },
+                
+                // 生成配置JSON
+                generateConfigJson() {
+                    // 生成颜色配置
+                    this.systemConfig.color_system = JSON.stringify({
+                        color: this.colorList.map(item => item.value)
+                    });
+                    
+                    // 生成品牌配置
+                    this.systemConfig.brand_system = JSON.stringify({
+                        brand: this.brandList.map(item => {
+                            const obj = {};
+                            obj[item.brand] = item.series.map(series => series.value);
+                            return obj;
+                        })
+                    });
+                    
+                    // 生成平台配置
+                    this.systemConfig.platform_system = JSON.stringify({
+                        platform: this.platformList.map(item => item.value)
+                    });
+                    
+                    // 生成存储配置
+                    this.systemConfig.storage_system = JSON.stringify({
+                        storage: this.storageList.map(item => item.value)
+                    });
+                    
+                    // 生成快递公司配置
+                    this.systemConfig.express_system = JSON.stringify({
+                        express: this.expressList.map(item => item.value)
+                    });
+                },
+                
+                // 店铺管理
+                fetchShops() {
+                    axios.post('/API/shop.php', {
+                        action: 'get',
+                        token: localStorage.getItem('token')
+                    })
+                    .then(response => {
+                        if (response.data.code === 200) {
+                            this.shops = response.data.data;
+                        } else {
+                            this.$message.error(response.data.msg);
+                        }
+                    })
+                    .catch(error => {
+                        this.$message.error('获取店铺列表失败');
+                        console.error(error);
+                    });
+                },
+                openAddShopDialog() {
+                    this.shopForm = {
+                        sid: '',
+                        shop_name: '',
+                        platform: '',
+                        state: 1
+                    };
+                    this.addShopDialogVisible = true;
+                },
+                addShop() {
+                    axios.post('/API/shop.php', {
+                        action: 'add',
+                        token: localStorage.getItem('token'),
+                        shop_name: this.shopForm.shop_name,
+                        platform: this.shopForm.platform,
+                        state: this.shopForm.state
+                    })
+                    .then(response => {
+                        if (response.data.code === 200) {
+                            this.$message.success(response.data.msg);
+                            this.addShopDialogVisible = false;
+                            this.fetchShops();
+                        } else {
+                            this.$message.error(response.data.msg);
+                        }
+                    })
+                    .catch(error => {
+                        this.$message.error('添加店铺失败');
+                        console.error(error);
+                    });
+                },
+                openEditShopDialog(row) {
+                    this.shopForm = JSON.parse(JSON.stringify(row));
+                    this.editShopDialogVisible = true;
+                },
+                updateShop() {
+                    axios.post('/API/shop.php', {
+                        action: 'update',
+                        token: localStorage.getItem('token'),
+                        sid: this.shopForm.sid,
+                        shop_name: this.shopForm.shop_name,
+                        platform: this.shopForm.platform,
+                        state: this.shopForm.state
+                    })
+                    .then(response => {
+                        if (response.data.code === 200) {
+                            this.$message.success(response.data.msg);
+                            this.editShopDialogVisible = false;
+                            this.fetchShops();
+                        } else {
+                            this.$message.error(response.data.msg);
+                        }
+                    })
+                    .catch(error => {
+                        this.$message.error('更新店铺失败');
+                        console.error(error);
+                    });
+                },
+                deleteShop(sid) {
+                    this.$confirm('确定要删除这个店铺吗？', '提示', {
+                        confirmButtonText: '确定',
+                        cancelButtonText: '取消',
+                        type: 'warning'
+                    })
+                    .then(() => {
+                        axios.post('/API/shop.php', {
+                            action: 'delete',
+                            token: localStorage.getItem('token'),
+                            sid: sid
+                        })
+                        .then(response => {
+                            if (response.data.code === 200) {
+                                this.$message.success(response.data.msg);
+                                this.fetchShops();
+                            } else {
+                                this.$message.error(response.data.msg);
+                            }
+                        })
+                        .catch(error => {
+                            this.$message.error('删除店铺失败');
+                            console.error(error);
+                        });
+                    })
+                    .catch(() => {
+                        this.$message.info('已取消删除');
+                    });
+                },
+                
+                // 用户管理
+                fetchUsers() {
+                    axios.post('/API/user.php', {
+                        action: 'get',
+                        token: localStorage.getItem('token')
+                    })
+                    .then(response => {
+                        if (response.data.code === 200) {
+                            this.users = response.data.data;
+                        } else {
+                            this.$message.error(response.data.msg);
+                        }
+                    })
+                    .catch(error => {
+                        this.$message.error('获取用户列表失败');
+                        console.error(error);
+                    });
+                },
+                openAddExistingUserDialog() {
+                    this.fetchAvailableUsers();
+                    this.addExistingUserDialogVisible = true;
+                },
+                fetchAvailableUsers() {
+                    axios.post('/API/user.php', {
+                        action: 'get_available',
+                        token: localStorage.getItem('token')
+                    })
+                    .then(response => {
+                        if (response.data.code === 200) {
+                            this.availableUsers = response.data.data;
+                        } else {
+                            this.$message.error(response.data.msg);
+                        }
+                    })
+                    .catch(error => {
+                        this.$message.error('获取可用用户列表失败');
+                        console.error(error);
+                    });
+                },
+                handleSelectionChange(selection) {
+                    this.selectedUsers = selection;
+                },
+                addExistingUser() {
+                    if (this.selectedUsers.length === 0) {
+                        this.$message.warning('请选择要添加的用户');
+                        return;
+                    }
+                    
+                    const uid = this.selectedUsers[0].uid;
+                    axios.post('/API/user.php', {
+                        action: 'join_company',
+                        token: localStorage.getItem('token'),
+                        uid: uid
+                    })
+                    .then(response => {
+                        if (response.data.code === 200) {
+                            this.$message.success('添加用户成功');
+                            this.addExistingUserDialogVisible = false;
+                            this.selectedUsers = [];
+                            this.fetchUsers();
+                        } else {
+                            this.$message.error(response.data.msg);
+                        }
+                    })
+                    .catch(error => {
+                        this.$message.error('添加用户失败');
+                        console.error(error);
+                    });
+                },
+                openAddUserDialog() {
+                    this.userForm = {
+                        uid: '',
+                        username: '',
+                        password: '',
+                        email: '',
+                        mobile_phone: '',
+                        authority: '',
+                        state: 1
+                    };
+                    this.addUserDialogVisible = true;
+                },
+                addUser() {
+                    axios.post('/API/user.php', {
+                        action: 'add',
+                        token: localStorage.getItem('token'),
+                        username: this.userForm.username,
+                        password: this.userForm.password,
+                        email: this.userForm.email,
+                        mobile_phone: this.userForm.mobile_phone,
+                        authority: this.userForm.authority,
+                        state: this.userForm.state
+                    })
+                    .then(response => {
+                        if (response.data.code === 200) {
+                            this.$message.success(response.data.msg);
+                            this.addUserDialogVisible = false;
+                            this.fetchUsers();
+                        } else {
+                            this.$message.error(response.data.msg);
+                        }
+                    })
+                    .catch(error => {
+                        this.$message.error('添加用户失败');
+                        console.error(error);
+                    });
+                },
+                openEditUserDialog(row) {
+                    this.userForm = JSON.parse(JSON.stringify(row));
+                    this.userForm.password = ''; // 清空密码，留空则不修改
+                    this.editUserDialogVisible = true;
+                },
+                updateUser() {
+                    axios.post('/API/user.php', {
+                        action: 'update',
+                        token: localStorage.getItem('token'),
+                        uid: this.userForm.uid,
+                        password: this.userForm.password,
+                        email: this.userForm.email,
+                        mobile_phone: this.userForm.mobile_phone,
+                        authority: this.userForm.authority,
+                        state: this.userForm.state
+                    })
+                    .then(response => {
+                        if (response.data.code === 200) {
+                            this.$message.success(response.data.msg);
+                            this.editUserDialogVisible = false;
+                            this.fetchUsers();
+                        } else {
+                            this.$message.error(response.data.msg);
+                        }
+                    })
+                    .catch(error => {
+                        this.$message.error('更新用户失败');
+                        console.error(error);
+                    });
+                },
+                deleteUser(uid) {
+                    this.$confirm('确定要删除这个用户吗？', '提示', {
+                        confirmButtonText: '确定',
+                        cancelButtonText: '取消',
+                        type: 'warning'
+                    })
+                    .then(() => {
+                        axios.post('/API/user.php', {
+                            action: 'delete',
+                            token: localStorage.getItem('token'),
+                            uid: uid
+                        })
+                        .then(response => {
+                            if (response.data.code === 200) {
+                                this.$message.success(response.data.msg);
+                                this.fetchUsers();
+                            } else {
+                                this.$message.error(response.data.msg);
+                            }
+                        })
+                        .catch(error => {
+                            this.$message.error('删除用户失败');
+                            console.error(error);
+                        });
+                    })
+                    .catch(() => {
+                        this.$message.info('已取消删除');
+                    });
+                },
+                
+                // 系统配置管理
+                fetchSystemConfig() {
+                    axios.post('/API/system.php', {
+                        action: 'get',
+                        token: localStorage.getItem('token')
+                    })
+                    .then(response => {
+                        if (response.data.code === 200) {
+                            this.systemConfig = response.data.data;
+                        } else {
+                            this.$message.error(response.data.msg);
+                        }
+                    })
+                    .catch(error => {
+                        this.$message.error('获取系统配置失败');
+                        console.error(error);
+                    });
+                },
+                saveSystemConfig() {
+                    // 生成配置 JSON
+                    this.generateConfigJson();
+                    
+                    axios.post('/API/system.php', {
+                        action: 'update',
+                        token: localStorage.getItem('token'),
+                        color_system: this.systemConfig.color_system,
+                        brand_system: this.systemConfig.brand_system,
+                        platform_system: this.systemConfig.platform_system,
+                        storage_system: this.systemConfig.storage_system,
+                        express_system: this.systemConfig.express_system
+                    })
+                    .then(response => {
+                        if (response.data.code === 200) {
+                            this.$message.success('保存配置成功');
+                        } else {
+                            this.$message.error(response.data.msg);
+                        }
+                    })
+                    .catch(error => {
+                        this.$message.error('保存系统配置失败');
+                        console.error(error);
+                    });
+                },
+                resetDefaultConfig() {
+                    this.$confirm('确定要重置为默认配置吗？', '提示', {
+                        confirmButtonText: '确定',
+                        cancelButtonText: '取消',
+                        type: 'warning'
+                    })
+                    .then(() => {
+                        this.systemConfig = {
+                            color_system: '{"color":["黑色","白色","黄色","青色","幻彩"]}',
+                            brand_system: '{"brand":[{"HUAWEI":["P","Mate","nove"]},{"REDMI":["K","Note"]}]}',
+                            platform_system: '{"platform":["闲鱼","拍机堂","拼多多","线下回收","转转"]}',
+                            storage_system: '{"storage":["8+256","12+512","8+128","6+128","16+512","4+64"]}',
+                            express_system: '{"express":["顺丰速运","京东快递","邮政快递","中通快递","申通快递","韵达快递"]}'
+                        };
+                        this.$message.success('已重置为默认配置');
+                    })
+                    .catch(() => {
+                        this.$message.info('已取消重置');
+                    });
+                },
+                validateAllJson() {
+                    let isValid = true;
+                    
+                    // 验证颜色配置
+                    if (this.systemConfig.color_system && !this.isValidJson(this.systemConfig.color_system)) {
+                        this.$message.error('颜色配置JSON格式错误');
+                        isValid = false;
+                    }
+                    
+                    // 验证品牌+系列配置
+                    if (this.systemConfig.brand_system && !this.isValidJson(this.systemConfig.brand_system)) {
+                        this.$message.error('品牌+系列配置JSON格式错误');
+                        isValid = false;
+                    }
+                    
+                    // 验证平台配置
+                    if (this.systemConfig.platform_system && !this.isValidJson(this.systemConfig.platform_system)) {
+                        this.$message.error('平台配置JSON格式错误');
+                        isValid = false;
+                    }
+                    
+                    // 验证存储配置
+                    if (this.systemConfig.storage_system && !this.isValidJson(this.systemConfig.storage_system)) {
+                        this.$message.error('存储配置JSON格式错误');
+                        isValid = false;
+                    }
+                    
+                    // 验证快递公司配置
+                    if (this.systemConfig.express_system && !this.isValidJson(this.systemConfig.express_system)) {
+                        this.$message.error('快递公司配置JSON格式错误');
+                        isValid = false;
+                    }
+                    
+                    if (isValid) {
+                        this.$message.success('所有JSON格式验证通过');
+                    }
+                    
+                    return isValid;
+                },
+                // 颜色配置操作
+                openAddColorDialog() {
+                    this.colorForm = { value: '' };
+                    this.addColorDialogVisible = true;
+                },
+                addColor() {
+                    if (!this.colorForm.value) {
+                        this.$message.error('颜色名称不能为空');
+                        return;
+                    }
+                    this.colorList.push({ value: this.colorForm.value });
+                    this.addColorDialogVisible = false;
+                    this.$message.info('已添加颜色，请点击保存配置');
+                },
+                openEditColorDialog(row) {
+                    this.colorForm = { value: row.value, oldValue: row.value };
+                    this.editColorDialogVisible = true;
+                },
+                updateColor() {
+                    if (!this.colorForm.value) {
+                        this.$message.error('颜色名称不能为空');
+                        return;
+                    }
+                    // 查找原值并更新
+                    const index = this.colorList.findIndex(item => item.value === this.colorForm.oldValue);
+                    if (index !== -1) {
+                        this.colorList[index].value = this.colorForm.value;
+                    }
+                    this.editColorDialogVisible = false;
+                    this.$message.info('已修改颜色，请点击保存配置');
+                },
+                deleteColor(row) {
+                    this.$confirm('确定要删除这个颜色吗？', '提示', {
+                        confirmButtonText: '确定',
+                        cancelButtonText: '取消',
+                        type: 'warning'
+                    })
+                    .then(() => {
+                        const index = this.colorList.findIndex(item => item.value === row.value);
+                        if (index !== -1) {
+                            this.colorList.splice(index, 1);
+                        }
+                        this.$message.info('已删除颜色，请点击保存配置');
+                    })
+                    .catch(() => {
+                        this.$message.info('已取消删除');
+                    });
+                },
+                
+                // 品牌配置操作
+                openAddBrandDialog() {
+                    this.brandForm = { brand: '', series: [] };
+                    this.brandSeriesInput = '';
+                    this.addBrandDialogVisible = true;
+                },
+                addBrandSeries() {
+                    if (this.brandSeriesInput) {
+                        this.brandForm.series.push({ value: this.brandSeriesInput });
+                        this.brandSeriesInput = '';
+                    }
+                },
+                removeBrandSeries(index) {
+                    this.brandForm.series.splice(index, 1);
+                },
+                addBrand() {
+                    if (!this.brandForm.brand) {
+                        this.$message.error('品牌名称不能为空');
+                        return;
+                    }
+                    this.brandList.push({ brand: this.brandForm.brand, series: [...this.brandForm.series] });
+                    this.addBrandDialogVisible = false;
+                    this.$message.info('已添加品牌，请点击保存配置');
+                },
+                openEditBrandDialog(row) {
+                    this.brandForm = { 
+                        brand: row.brand, 
+                        series: JSON.parse(JSON.stringify(row.series)), 
+                        originalBrand: row.brand 
+                    };
+                    this.brandSeriesInput = '';
+                    this.editBrandDialogVisible = true;
+                },
+                updateBrand() {
+                    if (!this.brandForm.brand) {
+                        this.$message.error('品牌名称不能为空');
+                        return;
+                    }
+                    // 使用原始品牌名称查找
+                    const index = this.brandList.findIndex(item => item.brand === this.brandForm.originalBrand);
+                    if (index !== -1) {
+                        this.brandList[index] = { brand: this.brandForm.brand, series: JSON.parse(JSON.stringify(this.brandForm.series)) };
+                    }
+                    this.editBrandDialogVisible = false;
+                    this.$message.info('已修改品牌，请点击保存配置');
+                },
+                
+                // 系列配置操作
+                openAddSeriesDialog() {
+                    this.seriesForm = { value: '' };
+                    this.addSeriesDialogVisible = true;
+                },
+                addSeries() {
+                    if (!this.seriesForm.value) {
+                        this.$message.error('系列名称不能为空');
+                        return;
+                    }
+                    this.brandForm.series.push({ value: this.seriesForm.value });
+                    this.addSeriesDialogVisible = false;
+                    this.$message.info('已添加系列，请点击保存配置');
+                },
+                openEditSeriesDialog(row) {
+                    this.seriesForm = { value: row.value, oldValue: row.value };
+                    this.editSeriesDialogVisible = true;
+                },
+                updateSeries() {
+                    if (!this.seriesForm.value) {
+                        this.$message.error('系列名称不能为空');
+                        return;
+                    }
+                    // 找到当前编辑的系列并更新
+                    const index = this.brandForm.series.findIndex(item => item.value === this.seriesForm.oldValue);
+                    if (index !== -1) {
+                        this.brandForm.series[index].value = this.seriesForm.value;
+                    }
+                    this.editSeriesDialogVisible = false;
+                    this.$message.info('已修改系列，请点击保存配置');
+                },
+                removeBrandSeriesFromTable(index) {
+                    this.brandForm.series.splice(index, 1);
+                },
+                deleteBrand(row) {
+                    this.$confirm('确定要删除这个品牌吗？', '提示', {
+                        confirmButtonText: '确定',
+                        cancelButtonText: '取消',
+                        type: 'warning'
+                    })
+                    .then(() => {
+                        const index = this.brandList.findIndex(item => item.brand === row.brand);
+                        if (index !== -1) {
+                            this.brandList.splice(index, 1);
+                        }
+                        this.$message.info('已删除品牌，请点击保存配置');
+                    })
+                    .catch(() => {
+                        this.$message.info('已取消删除');
+                    });
+                },
+                
+                // 平台配置操作
+                openAddPlatformDialog() {
+                    this.platformForm = { value: '' };
+                    this.addPlatformDialogVisible = true;
+                },
+                addPlatform() {
+                    if (!this.platformForm.value) {
+                        this.$message.error('平台名称不能为空');
+                        return;
+                    }
+                    this.platformList.push({ value: this.platformForm.value });
+                    this.addPlatformDialogVisible = false;
+                    this.$message.info('已添加平台，请点击保存配置');
+                },
+                openEditPlatformDialog(row) {
+                    this.platformForm = { value: row.value, oldValue: row.value };
+                    this.editPlatformDialogVisible = true;
+                },
+                updatePlatform() {
+                    if (!this.platformForm.value) {
+                        this.$message.error('平台名称不能为空');
+                        return;
+                    }
+                    const index = this.platformList.findIndex(item => item.value === this.platformForm.oldValue);
+                    if (index !== -1) {
+                        this.platformList[index].value = this.platformForm.value;
+                    }
+                    this.editPlatformDialogVisible = false;
+                    this.$message.info('已修改平台，请点击保存配置');
+                },
+                deletePlatform(row) {
+                    this.$confirm('确定要删除这个平台吗？', '提示', {
+                        confirmButtonText: '确定',
+                        cancelButtonText: '取消',
+                        type: 'warning'
+                    })
+                    .then(() => {
+                        const index = this.platformList.findIndex(item => item.value === row.value);
+                        if (index !== -1) {
+                            this.platformList.splice(index, 1);
+                        }
+                        this.$message.info('已删除平台，请点击保存配置');
+                    })
+                    .catch(() => {
+                        this.$message.info('已取消删除');
+                    });
+                },
+                
+                // 存储配置操作
+                openAddStorageDialog() {
+                    this.storageForm = { value: '' };
+                    this.addStorageDialogVisible = true;
+                },
+                addStorage() {
+                    if (!this.storageForm.value) {
+                        this.$message.error('存储容量不能为空');
+                        return;
+                    }
+                    this.storageList.push({ value: this.storageForm.value });
+                    this.addStorageDialogVisible = false;
+                    this.$message.info('已添加存储，请点击保存配置');
+                },
+                openEditStorageDialog(row) {
+                    this.storageForm = { value: row.value, oldValue: row.value };
+                    this.editStorageDialogVisible = true;
+                },
+                updateStorageConfig() {
+                    if (!this.storageForm.value) {
+                        this.$message.error('存储容量不能为空');
+                        return;
+                    }
+                    const index = this.storageList.findIndex(item => item.value === this.storageForm.oldValue);
+                    if (index !== -1) {
+                        this.storageList[index].value = this.storageForm.value;
+                    }
+                    this.editStorageDialogVisible = false;
+                    this.$message.info('已修改存储，请点击保存配置');
+                },
+                deleteStorage(row) {
+                    this.$confirm('确定要删除这个存储吗？', '提示', {
+                        confirmButtonText: '确定',
+                        cancelButtonText: '取消',
+                        type: 'warning'
+                    })
+                    .then(() => {
+                        const index = this.storageList.findIndex(item => item.value === row.value);
+                        if (index !== -1) {
+                            this.storageList.splice(index, 1);
+                        }
+                        this.$message.info('已删除存储，请点击保存配置');
+                    })
+                    .catch(() => {
+                        this.$message.info('已取消删除');
+                    });
+                },
+                
+                // 快递公司配置操作
+                openAddExpressDialog() {
+                    this.expressForm = { value: '' };
+                    this.addExpressDialogVisible = true;
+                },
+                addExpress() {
+                    if (!this.expressForm.value) {
+                        this.$message.error('快递公司名称不能为空');
+                        return;
+                    }
+                    this.expressList.push({ value: this.expressForm.value });
+                    this.addExpressDialogVisible = false;
+                    this.$message.info('已添加快递公司，请点击保存配置');
+                },
+                openEditExpressDialog(row) {
+                    this.expressForm = { value: row.value, oldValue: row.value };
+                    this.editExpressDialogVisible = true;
+                },
+                updateExpress() {
+                    if (!this.expressForm.value) {
+                        this.$message.error('快递公司名称不能为空');
+                        return;
+                    }
+                    const index = this.expressList.findIndex(item => item.value === this.expressForm.oldValue);
+                    if (index !== -1) {
+                        this.expressList[index].value = this.expressForm.value;
+                    }
+                    this.editExpressDialogVisible = false;
+                    this.$message.info('已修改快递公司，请点击保存配置');
+                },
+                deleteExpress(row) {
+                    this.$confirm('确定要删除这个快递公司吗？', '提示', {
+                        confirmButtonText: '确定',
+                        cancelButtonText: '取消',
+                        type: 'warning'
+                    })
+                    .then(() => {
+                        const index = this.expressList.findIndex(item => item.value === row.value);
+                        if (index !== -1) {
+                            this.expressList.splice(index, 1);
+                        }
+                        this.$message.info('已删除快递公司，请点击保存配置');
+                    })
+                    .catch(() => {
+                        this.$message.info('已取消删除');
+                    });
+                },
+                
+                // 重置默认配置
+                resetDefaultConfig() {
+                    this.$confirm('确定要重置为默认配置吗？', '提示', {
+                        confirmButtonText: '确定',
+                        cancelButtonText: '取消',
+                        type: 'warning'
+                    })
+                    .then(() => {
+                        this.systemConfig = {
+                            color_system: '{"color":["黑色","白色","黄色","青色","幻彩"]}',
+                            brand_system: '{"brand":[{"HUAWEI":["P","Mate","nove"]},{"REDMI":["K","Note"]}]}',
+                            platform_system: '{"platform":["闲鱼","拍机堂","拼多多","线下回收","转转"]}',
+                            storage_system: '{"storage":["8+256","12+512","8+128","6+128","16+512","4+64"]}',
+                            express_system: '{"express":["顺丰速运","京东快递","邮政快递","中通快递","申通快递","韵达快递"]}'
+                        };
+                        this.$message.success('已重置为默认配置');
+                    })
+                    .catch(() => {
+                        this.$message.info('已取消重置');
+                    });
+                },
+                
+                // 验证 JSON 格式
+                isValidJson(json) {
+                    try {
+                        JSON.parse(json);
+                        return true;
+                    } catch (e) {
+                        return false;
+                    }
+                },
+                
+                // 企业管理
+                fetchCompanies() {
+                    axios.post('/API/company.php', {
+                        action: 'get_companies',
+                        token: localStorage.getItem('token')
+                    })
+                    .then(response => {
+                        if (response.data.code === 200) {
+                            this.companies = response.data.data || [];
+                        } else {
+                            this.$message.error(response.data.msg);
+                        }
+                    })
+                    .catch(error => {
+                        this.$message.error('获取企业列表失败');
+                        console.error(error);
+                    });
+                },
+                openEditCompanyDialog(row) {
+                    this.companyForm = {
+                        cid: row.cid,
+                        company_name: row.company_name,
+                        uid: row.uid,
+                        state: row.state
+                    };
+                    this.editCompanyDialogVisible = true;
+                },
+                updateCompany() {
+                    if (!this.companyForm.company_name) {
+                        this.$message.error('企业名称不能为空');
+                        return;
+                    }
+                    
+                    axios.post('/API/company.php', {
+                        action: 'update_company',
+                        token: localStorage.getItem('token'),
+                        cid: this.companyForm.cid,
+                        company_name: this.companyForm.company_name,
+                        state: this.companyForm.state
+                    })
+                    .then(response => {
+                        if (response.data.code === 200) {
+                            this.$message.success('更新企业成功');
+                            this.editCompanyDialogVisible = false;
+                            this.fetchCompanies();
+                        } else {
+                            this.$message.error(response.data.msg);
+                        }
+                    })
+                    .catch(error => {
+                        this.$message.error('更新企业失败');
+                        console.error(error);
+                    });
+                }
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,1071 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>二手手机回收销售ERP管理系统</title>
+    <link rel="stylesheet" href="style/css/element-ui.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+        .app-container {
+            width: 95%;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #409EFF;
+        }
+        .operation-bar {
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+        }
+        .filter-bar {
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+        }
+        .el-table {
+            margin-bottom: 20px;
+        }
+        .dialog-form {
+            /* width: 400px; */
+        }
+        .el-table .cell {
+            white-space: normal;
+            word-break: break-all;
+            line-height: 1.5;
+        }
+        .el-input{
+            width: auto;
+        }
+        .el-form-item{
+            margin-bottom: 10px;
+        }
+        .app-container{
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="app-container" :style="wait">
+            <div class="operation-bar">
+                <el-button type="primary" @click="openAddDialog">添加手机</el-button>
+                <el-input placeholder="搜索机器编码" v-model="searchQuery" style="width: 350px; margin-left: 10px;">
+                    <el-button slot="append" icon="el-icon-search" @click="search"></el-button>
+                </el-input>
+            </div>
+            <div class="filter-bar">
+                <el-select v-model="filterForm.brand" placeholder="品牌" clearable filterable allow-create style="width: 120px;">
+                    <el-option v-for="brand in brands" :key="brand" :label="brand" :value="brand"></el-option>
+                </el-select>
+                <el-select v-model="filterForm.series" placeholder="系列" clearable filterable allow-create style="width: 120px; margin-left: 10px;">
+                    <el-option v-for="series in seriesList" :key="series" :label="series" :value="series"></el-option>
+                </el-select>
+                <el-select v-model="filterForm.model" placeholder="型号" clearable filterable allow-create style="width: 120px; margin-left: 10px;">
+                    <el-option v-for="model in modelList" :key="model" :label="model" :value="model"></el-option>
+                </el-select>
+                <el-select v-model="filterForm.color" placeholder="颜色" clearable filterable allow-create style="width: 120px; margin-left: 10px;">
+                    <el-option v-for="color in colorList" :key="color" :label="color" :value="color"></el-option>
+                </el-select>
+                <el-select v-model="filterForm.storage" placeholder="存储" clearable filterable allow-create style="width: 120px; margin-left: 10px;">
+                    <el-option v-for="storage in storageList" :key="storage" :label="storage" :value="storage"></el-option>
+                </el-select>
+                <el-select v-model="filterForm.acquisition_platform" placeholder="采购平台" clearable filterable allow-create style="width: 120px; margin-left: 10px;">
+                    <el-option v-for="platform in platformList" :key="platform" :label="platform" :value="platform"></el-option>
+                </el-select>
+                <el-select v-model="filterForm.state" placeholder="状态" clearable style="width: 120px; margin-left: 10px;">
+                    <el-option label="采购中" :value="1"></el-option>
+                    <el-option label="待质检" :value="2"></el-option>
+                    <el-option label="待上架" :value="3"></el-option>
+                    <el-option label="在销售" :value="4"></el-option>
+                    <el-option label="已销售" :value="5"></el-option>
+                    <el-option label="在售后" :value="6"></el-option>
+                    <el-option label="已售后" :value="7"></el-option>
+                </el-select>
+                <el-date-picker
+                    v-model="filterForm.sell_time_start"
+                    type="date"
+                    placeholder="出售日期"
+                    value-format="yyyy-MM-dd"
+                    style="width: 160px; margin-left: 10px;">
+                </el-date-picker>
+                <el-date-picker
+                    v-model="filterForm.sell_time_end"
+                    type="date"
+                    placeholder="出售日期"
+                    value-format="yyyy-MM-dd"
+                    style="width: 160px; margin-left: 10px;">
+                </el-date-picker>
+                <el-button type="primary" @click="applyFilter" style="margin-left: 10px;">筛选</el-button>
+                <el-button @click="resetFilter" style="margin-left: 10px;">重置</el-button>
+            </div>
+            
+            <el-table :data="paginatedPhones" stripe >
+                <el-table-column label="型号" nowrap width="200" align="center">
+                    <template slot-scope="scope">
+                        <span>{{ scope.row.brand }} {{ scope.row.series }} {{ scope.row.model }}</span>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="storage" label="存储" width="70"></el-table-column>
+                <el-table-column prop="color" label="颜色"  width="50"></el-table-column>
+                <el-table-column prop="battery" label="电池" width="50"></el-table-column>
+                <el-table-column label="状态" width="80">
+                    <template slot-scope="scope">
+                        <span v-if="scope.row.state === 1" style="color: #409EFF;">采购中</span>
+                        <span v-else-if="scope.row.state === 2" style="color: #E6A23C;">待质检</span>
+                        <span v-else-if="scope.row.state === 3" style="color: #67C23A;">待上架</span>
+                        <span v-else-if="scope.row.state === 4" style="color: #909399;">在销售</span>
+                        <span v-else-if="scope.row.state === 5" style="color: #67C23A;">已销售</span>
+                        <span v-else-if="scope.row.state === 6" style="color: #F56C6C;">在售后</span>
+                        <span v-else-if="scope.row.state === 7" style="color: #909399;">已售后</span>
+                        <span v-else>-</span>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="cost" label="总成本"></el-table-column>
+                <el-table-column prop="selling_price" label="售价"></el-table-column>
+                <el-table-column prop="profit" label="利润"></el-table-column>
+                <el-table-column label="操作" width="150">
+                    <template slot-scope="scope">
+                        <el-button size="mini" type="primary" @click="openEditDialog(scope.row)">编辑</el-button>
+                        <el-button size="mini" type="danger" @click="deletePhone(scope.row.wid)">删除</el-button>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="remark" label="备注" width="200"></el-table-column>
+                
+            </el-table>
+            
+            <!-- 分页组件 -->
+            <el-pagination
+                background
+                layout="total, sizes, prev, pager, next, jumper"
+                :total="total"
+                :page-sizes="[10, 50, 80, 200]"
+                :page-size="pageSize"
+                :current-page="currentPage"
+                @size-change="handleSizeChange"
+                @current-change="handleCurrentChange"
+                style="text-align: right; margin-top: 20px;"
+            ></el-pagination>
+        </div>
+        
+        <!-- 添加对话框 -->
+        <el-dialog title="添加手机" :visible.sync="addDialogVisible" width="800px">
+            <el-form :model="addForm" class="dialog-form">
+                <el-row :gutter="20">
+                    <el-col :span="12">
+                        <el-form-item label="收购平台">
+                            <el-select v-model="addForm.acquisition_platform" placeholder="请选择收购平台" filterable allow-create>
+                                <el-option v-for="platform in platformList" :key="platform" :label="platform" :value="platform"></el-option>
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item label="收购时间">
+                            <el-date-picker
+                                v-model="addForm.acquisition_time"
+                                type="datetime"
+                                format="yyyy年MM月dd日"
+                                value-format="yyyy-MM-dd"
+                                placeholder="选择收购时间"
+                            ></el-date-picker>
+                        </el-form-item>
+                        <el-form-item label="品牌">
+                            <el-select v-model="addForm.brand" placeholder="请选择品牌" filterable allow-create @change="handleBrandChange">
+                                <el-option v-for="brand in brands" :key="brand" :label="brand" :value="brand"></el-option>
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item label="系列">
+                            <el-select v-model="addForm.series" placeholder="请选择系列" filterable allow-create @change="handleSeriesChange">
+                                <el-option v-for="series in seriesList" :key="series" :label="series" :value="series"></el-option>
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item label="型号">
+                            <el-select v-model="addForm.model" placeholder="请选择型号" filterable allow-create>
+                                <el-option v-for="model in modelList" :key="model" :label="model" :value="model"></el-option>
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item label="颜色">
+                            <el-select v-model="addForm.color" placeholder="请选择颜色" filterable allow-create>
+                                <el-option v-for="color in colorList" :key="color" :label="color" :value="color"></el-option>
+                            </el-select>
+                        </el-form-item>
+                        
+                        <el-form-item label="存储">
+                            <el-select v-model="addForm.storage" placeholder="请选择存储" filterable allow-create>
+                                <el-option v-for="storage in storageList" :key="storage" :label="storage" :value="storage"></el-option>
+                            </el-select>
+                        </el-form-item>
+
+                        <el-form-item label="机器编码">
+                            <el-input v-model="addForm.machine_code" style="width: auto;"></el-input>
+                        </el-form-item>
+
+                        <el-form-item label="收购价">
+                            <el-input v-model.number="addForm.purchase_price" type="number"></el-input>
+                        </el-form-item>
+
+                       
+                        <el-form-item label="电池健康">
+                            <el-input v-model.number="addForm.battery" type="number" style="width: auto;"></el-input>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="12">
+                         <el-form-item label="售价">
+                            <el-input v-model.number="addForm.selling_price" type="number"></el-input>
+                            <el-button type="primary" size="mini" @click="autoFillAddSellingPrice" style="margin-top: 5px;">自动</el-button>
+                        </el-form-item>
+                        <el-form-item label="维修费用">
+                            <el-input v-model.number="addForm.repair" type="number"></el-input>
+                        </el-form-item>
+                        <el-form-item label="配套费用">
+                            <el-input v-model.number="addForm.matching" type="number"></el-input>
+                        </el-form-item>
+                        <el-form-item label="总成本">
+                            <el-input :value="addFormCost" type="number" disabled></el-input>
+                              </el-form-item>
+                        <el-form-item label="邮费">
+                            <el-input v-model.number="addForm.postage" type="number"></el-input>
+                        </el-form-item>
+                        <el-form-item label="出售时间">
+                            <el-date-picker
+                                v-model="addForm.sell_time"
+                                type="datetime"
+                                format="yyyy年MM月dd日"
+                                value-format="yyyy-MM-dd"
+                                placeholder="选择出售时间"
+                            ></el-date-picker>
+                        </el-form-item>
+                        <el-form-item label="利润">
+                            <el-input :value="addFormProfit" type="number" disabled></el-input>
+                             </el-form-item>
+                        <el-form-item label="状态" style="margin-bottom: 0;">
+                            <el-select v-model="addForm.state" placeholder="选择状态">
+                                <el-option label="采购中" :value="1"></el-option>
+                                <el-option label="待质检" :value="2"></el-option>
+                                <el-option label="待上架" :value="3"></el-option>
+                                <el-option label="在销售" :value="4"></el-option>
+                                <el-option label="已销售" :value="5"></el-option>
+                                <el-option label="在售后" :value="6"></el-option>
+                                <el-option label="已售后" :value="7"></el-option>
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item label="备注">
+                            <el-input v-model="addForm.remark" type="textarea" rows="3"></el-input>
+                        </el-form-item>
+                    </el-col>
+                </el-row>
+            </el-form>
+            <span slot="footer" class="dialog-footer">
+                <el-button @click="addDialogVisible = false">取消</el-button>
+                <el-button type="primary" @click="addPhone">确定</el-button>
+            </span>
+        </el-dialog>
+        
+        <!-- 编辑对话框 -->
+        <el-dialog title="编辑手机" :visible.sync="editDialogVisible" width="800px">
+            <el-form :model="editForm"  class="dialog-form">
+                <el-row :gutter="20">
+                    <el-col :span="12">
+                        <el-form-item label="收购平台">
+                            <el-select v-model="editForm.acquisition_platform" placeholder="请选择收购平台" filterable allow-create>
+                                <el-option v-for="platform in platformList" :key="platform" :label="platform" :value="platform"></el-option>
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item label="收购时间">
+                            <el-date-picker
+                                v-model="editForm.acquisition_time"
+                                type="datetime"
+                                format="yyyy年MM月dd日"
+                                value-format="yyyy-MM-dd"
+                                placeholder="选择收购时间"
+                            ></el-date-picker>
+                        </el-form-item>
+                        <el-form-item label="品牌">
+                            <el-select v-model="editForm.brand" placeholder="请选择品牌" filterable allow-create @change="handleEditBrandChange">
+                                <el-option v-for="brand in brands" :key="brand" :label="brand" :value="brand"></el-option>
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item label="系列">
+                            <el-select v-model="editForm.series" placeholder="请选择系列" filterable allow-create @change="handleEditSeriesChange">
+                                <el-option v-for="series in seriesList" :key="series" :label="series" :value="series"></el-option>
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item label="型号">
+                            <el-select v-model="editForm.model" placeholder="请选择型号" filterable allow-create>
+                                <el-option v-for="model in modelList" :key="model" :label="model" :value="model"></el-option>
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item label="颜色">
+                            <el-select v-model="editForm.color" placeholder="请选择颜色" filterable allow-create>
+                                <el-option v-for="color in colorList" :key="color" :label="color" :value="color"></el-option>
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item label="存储">
+                            <el-select v-model="editForm.storage" placeholder="请选择存储" filterable allow-create>
+                                <el-option v-for="storage in storageList" :key="storage" :label="storage" :value="storage"></el-option>
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item label="机器编码">
+                            <el-input v-model="editForm.machine_code"></el-input>
+                        </el-form-item>
+                        <el-form-item label="收购价">
+                            <el-input v-model.number="editForm.purchase_price" type="number" style="width: auto;"></el-input>
+                        </el-form-item>
+                        <el-form-item label="电池健康">
+                            <el-input v-model.number="editForm.battery" type="number"></el-input>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="12">
+                        <el-form-item label="售价">
+                            <el-input v-model.number="editForm.selling_price" type="number" style="width: auto;"></el-input>
+                            <el-button type="primary" size="mini" @click="autoFillEditSellingPrice" style="margin-top: 5px;">自动</el-button>
+                        </el-form-item>
+                        <el-form-item label="维修费用">
+                            <el-input v-model.number="editForm.repair" type="number" style="width: auto;"></el-input>
+                        </el-form-item>
+                        <el-form-item label="配套费用">
+                            <el-input v-model.number="editForm.matching" type="number" style="width: auto;"></el-input>
+                        </el-form-item>
+                        <el-form-item label="总成本">
+                            <el-input :value="editFormCost" type="number" disabled></el-input>
+                           
+                        </el-form-item>
+                        <el-form-item label="邮费">
+                            <el-input v-model.number="editForm.postage" type="number" style="width: auto;"></el-input>
+                        </el-form-item>
+                        <el-form-item label="出售时间">
+                            <el-date-picker
+                                v-model="editForm.sell_time"
+                                type="datetime"
+                                format="yyyy年MM月dd日"
+                                value-format="yyyy-MM-dd"
+                                placeholder="选择出售时间"
+                            ></el-date-picker>
+                        </el-form-item>
+                        <el-form-item label="利润">
+                            <el-input :value="editFormProfit" type="number" disabled></el-input>
+                           
+                        </el-form-item>
+                        <el-form-item label="状态">
+                            <el-select v-model="editForm.state" placeholder="选择状态"  style="margin-bottom: 0;">
+                                <el-option label="采购中" :value="1"></el-option>
+                                <el-option label="待质检" :value="2"></el-option>
+                                <el-option label="待上架" :value="3"></el-option>
+                                <el-option label="在销售" :value="4"></el-option>
+                                <el-option label="已销售" :value="5"></el-option>
+                                <el-option label="在售后" :value="6"></el-option>
+                                <el-option label="已售后" :value="7"></el-option>
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item label="备注">
+                            <el-input v-model="editForm.remark" type="textarea" rows="3"></el-input>
+                        </el-form-item>
+                    </el-col>
+                </el-row>
+            </el-form>
+            <span slot="footer" class="dialog-footer">
+                <el-button @click="editDialogVisible = false">取消</el-button>
+                <el-button type="warning" @click="openReuseDialog">复用</el-button>
+                <el-button type="primary" @click="updatePhone">确定</el-button>
+            </span>
+        </el-dialog>
+
+        <!-- 复用机器对话框 -->
+        <el-dialog title="复用机器" :visible.sync="reuseDialogVisible" width="400px">
+            <el-form :model="reuseForm" label-width="100px">
+                <el-form-item label="复用数量">
+                    <el-input-number v-model="reuseForm.count" :min="1" :max="10" step-strictly></el-input-number>
+                </el-form-item>
+            </el-form>
+            <span slot="footer" class="dialog-footer">
+                <el-button @click="reuseDialogVisible = false">取消</el-button>
+                <el-button type="primary" @click="confirmReuse">确定</el-button>
+            </span>
+        </el-dialog>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="style/js/vue.min.js"></script>
+    <script src="style/js/element-ui.js"></script>
+    <script src="style/js/axios.min.js"></script>
+    <script>
+        new Vue({
+            el: '#app',
+            data() {
+                    return {
+                    wait:'display:block;',
+                        phoneList: [],
+                        total: 0,
+                        currentPage: 1,
+                        pageSize: 50,
+                        searchQuery: '',
+                        filterForm: {
+                            brand: '',
+                            series: '',
+                            model: '',
+                            color: '',
+                            storage: '',
+                            acquisition_platform: '',
+                            state: '',
+                            sell_time_start: '',
+                            sell_time_end: ''
+                        },
+                        addDialogVisible: false,
+                        editDialogVisible: false,
+                        typesList: [],
+                        brands: [],
+                        seriesList: [],
+                        modelList: [],
+                        colorList: [],
+                        platformList: [],
+                        storageList: [],
+                        addForm: {
+                            machine_code: '',
+                            acquisition_time: '',
+                            brand: '',
+                            series: '',
+                            model: '',
+                            storage: '8+256',
+                            color: '黑色',
+                            battery: 100,
+                            acquisition_platform: '拍机堂',
+                            purchase_price: 0,
+                            repair: 0,
+                            matching: 1,
+                            cost: 0,
+                            postage: 0,
+                            selling_price: 0,
+                            sell_time: '',
+                            profit: 0,
+                            remark: '',
+                            state: 3
+                        },
+                        editForm: {
+                            wid: '',
+                            machine_code: '',
+                            acquisition_time: '',
+                            brand: '',
+                            series: '',
+                            model: '',
+                            storage: '',
+                            color: '',
+                            battery: 100,
+                            acquisition_platform: '',
+                            purchase_price: 0,
+                            repair: 0,
+                            matching: 0,
+                            cost: 0,
+                            postage: 0,
+                            selling_price: 0,
+                            sell_time: '',
+                            profit: 0,
+                            remark: '',
+                            state: 1
+                        },
+                        reuseDialogVisible: false,
+                        reuseForm: {
+                            count: 1,
+                            currentWid: ''
+                        }
+                    };
+                },
+            mounted() {
+                this.fetchPhones();
+                this.fetchTypes();
+                this.fetchSystemConfig();
+            },
+            watch: {
+                // 监听添加表单的收购价变化
+                'addForm.purchase_price': function() {
+                    this.updateAddFormSellingPrice();
+                },
+                // 监听添加表单的维修费用变化
+                'addForm.repair': function() {
+                    this.updateAddFormSellingPrice();
+                },
+                // 监听添加表单的配套费用变化
+                'addForm.matching': function() {
+                    this.updateAddFormSellingPrice();
+                },
+                // 监听添加表单的出售时间变化
+                'addForm.sell_time': function(newVal) {
+                    if (newVal) {
+                        this.addForm.state = 5;
+                    }
+                },
+                // 监听编辑表单的收购价变化
+                'editForm.purchase_price': function() {
+                    this.updateEditFormSellingPrice();
+                },
+                // 监听编辑表单的维修费用变化
+                'editForm.repair': function() {
+                    this.updateEditFormSellingPrice();
+                },
+                // 监听编辑表单的配套费用变化
+                'editForm.matching': function() {
+                    this.updateEditFormSellingPrice();
+                },
+                // 监听编辑表单的出售时间变化
+                'editForm.sell_time': function(newVal) {
+                    if (newVal) {
+                        this.editForm.state = 5;
+                    }
+                },
+                // 监听筛选表单的品牌变化
+                'filterForm.brand': function(newBrand) {
+                    const brand = newBrand;
+                    const seriesSet = new Set();
+                    // 从types表中获取系列
+                    this.typesList.forEach(item => {
+                        if (item.brand === brand) {
+                            seriesSet.add(item.series);
+                        }
+                    });
+                    this.seriesList = Array.from(seriesSet);
+                    this.filterForm.series = '';
+                    this.filterForm.model = '';
+                },
+                // 监听筛选表单的系列变化
+                'filterForm.series': function(newSeries) {
+                    const brand = this.filterForm.brand;
+                    const series = newSeries;
+                    const modelSet = new Set();
+                    // 从types表中获取型号
+                    this.typesList.forEach(item => {
+                        if (item.brand === brand && item.series === series) {
+                            modelSet.add(item.model);
+                        }
+                    });
+                    this.modelList = Array.from(modelSet);
+                    this.filterForm.model = '';
+                }
+            },
+            computed: {
+                // 分页后的数据
+                paginatedPhones() {
+                    const start = (this.currentPage - 1) * this.pageSize;
+                    const end = start + this.pageSize;
+                    return this.phoneList.slice(start, end);
+                },
+                // 添加表单的总成本
+                addFormCost() {
+                    const purchasePrice = parseFloat(this.addForm.purchase_price) || 0;
+                    const repair = parseFloat(this.addForm.repair) || 0;
+                    const matching = parseFloat(this.addForm.matching) || 0;
+                    return (purchasePrice + repair + matching).toFixed(2);
+                },
+                // 添加表单的利润
+                addFormProfit() {
+                    const sellingPrice = parseFloat(this.addForm.selling_price) || 0;
+                    const cost = parseFloat(this.addFormCost) || 0;
+                    const postage = parseFloat(this.addForm.postage) || 0;
+                    return (sellingPrice - cost - postage).toFixed(2);
+                },
+                // 编辑表单的总成本
+                editFormCost() {
+                    const purchasePrice = parseFloat(this.editForm.purchase_price) || 0;
+                    const repair = parseFloat(this.editForm.repair) || 0;
+                    const matching = parseFloat(this.editForm.matching) || 0;
+                    return (purchasePrice + repair + matching).toFixed(2);
+                },
+                // 编辑表单的利润
+                editFormProfit() {
+                    const sellingPrice = parseFloat(this.editForm.selling_price) || 0;
+                    const cost = parseFloat(this.editFormCost) || 0;
+                    const postage = parseFloat(this.editForm.postage) || 0;
+                    return (sellingPrice - cost - postage).toFixed(2);
+                }
+            },
+            methods: {
+                autoFillAddSellingPrice() {
+                    const cost = parseFloat(this.addFormCost) || 0;
+                    this.addForm.selling_price = (cost * 1.2).toFixed(2);
+                },
+                autoFillEditSellingPrice() {
+                    const cost = parseFloat(this.editFormCost) || 0;
+                    this.editForm.selling_price = (cost * 1.2).toFixed(2);
+                },
+                updateAddFormSellingPrice() {
+                    const sellingPrice = parseFloat(this.addForm.selling_price) || 0;
+                    if (sellingPrice === 0) {
+                        const cost = parseFloat(this.addFormCost) || 0;
+                        this.addForm.selling_price = (cost * 1.2).toFixed(2);
+                    }
+                },
+                updateEditFormSellingPrice() {
+                    const sellingPrice = parseFloat(this.editForm.selling_price) || 0;
+                    if (sellingPrice === 0) {
+                        const cost = parseFloat(this.editFormCost) || 0;
+                        this.editForm.selling_price = (cost * 1.2).toFixed(2);
+                    }
+                },
+                fetchPhones() {
+                    axios.post('/API/phone.php', {
+                        action: 'get',
+                        token: localStorage.getItem('token'),
+                        machine_code: this.searchQuery,
+                        brand: this.filterForm.brand,
+                        series: this.filterForm.series,
+                        model: this.filterForm.model,
+                        color: this.filterForm.color,
+                        storage: this.filterForm.storage,
+                        acquisition_platform: this.filterForm.acquisition_platform,
+                        state: this.filterForm.state,
+                        sell_time_start: this.filterForm.sell_time_start,
+                        sell_time_end: this.filterForm.sell_time_end
+                    })
+                    .then(response => {
+                        if (response.data.code === 200) {
+                            this.phoneList = response.data.data;
+                            this.total = response.data.data.length;
+                        } else {
+                            this.$message.error(response.data.msg);
+                        }
+                    })
+                    .catch(error => {
+                        this.$message.error('获取数据失败');
+                        console.error(error);
+                    });
+                },
+                // 获取型号列表
+                fetchTypes() {
+                    axios.post('/API/types.php', {
+                        action: 'get',
+                        token: localStorage.getItem('token')
+                    })
+                    .then(response => {
+                        if (response.data.code === 200) {
+                            this.typesList = response.data.data;
+                            // 提取品牌列表
+                            const brandSet = new Set();
+                            this.typesList.forEach(item => {
+                                brandSet.add(item.brand);
+                            });
+                            this.brands = Array.from(brandSet);
+                            // 提取系列列表
+                            const seriesSet = new Set();
+                            this.typesList.forEach(item => {
+                                seriesSet.add(item.series);
+                            });
+                            this.seriesList = Array.from(seriesSet);
+                            // 提取型号列表
+                            const modelSet = new Set();
+                            this.typesList.forEach(item => {
+                                modelSet.add(item.model);
+                            });
+                            this.modelList = Array.from(modelSet);
+                        } else {
+                            console.error('获取型号列表失败:', response.data.msg);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('获取型号列表失败:', error);
+                    });
+                },
+                // 品牌变更时更新系列列表
+                handleBrandChange() {
+                    const brand = this.addForm.brand;
+                    const seriesSet = new Set();
+                    // 从types表中获取系列
+                    this.typesList.forEach(item => {
+                        if (item.brand === brand) {
+                            seriesSet.add(item.series);
+                        }
+                    });
+                    this.seriesList = Array.from(seriesSet);
+                    this.addForm.series = '';
+                    this.modelList = [];
+                },
+                // 系列变更时更新型号列表
+                handleSeriesChange() {
+                    const brand = this.addForm.brand;
+                    const series = this.addForm.series;
+                    const modelSet = new Set();
+                    // 从types表中获取型号
+                    this.typesList.forEach(item => {
+                        if (item.brand === brand && item.series === series) {
+                            modelSet.add(item.model);
+                        }
+                    });
+                    this.modelList = Array.from(modelSet);
+                    this.addForm.model = '';
+                },
+                // 编辑时品牌变更
+                handleEditBrandChange() {
+                    const brand = this.editForm.brand;
+                    const seriesSet = new Set();
+                    // 从types表中获取系列
+                    this.typesList.forEach(item => {
+                        if (item.brand === brand) {
+                            seriesSet.add(item.series);
+                        }
+                    });
+                    this.seriesList = Array.from(seriesSet);
+                    this.editForm.series = '';
+                    this.modelList = [];
+                },
+                // 编辑时系列变更
+                handleEditSeriesChange() {
+                    const brand = this.editForm.brand;
+                    const series = this.editForm.series;
+                    const modelSet = new Set();
+                    // 从types表中获取型号
+                    this.typesList.forEach(item => {
+                        if (item.brand === brand && item.series === series) {
+                            modelSet.add(item.model);
+                        }
+                    });
+                    this.modelList = Array.from(modelSet);
+                    this.editForm.model = '';
+                },
+                // 获取系统配置
+                fetchSystemConfig() {
+                    axios.post('/API/system.php', {
+                        action: 'get',
+                        token: localStorage.getItem('token')
+                    })
+                    .then(response => {
+                        if (response.data.code === 200) {
+                            const config = response.data.data;
+                            // 处理颜色配置
+                            if (config.color_system) {
+                                try {
+                                    const colorData = JSON.parse(config.color_system);
+                                    this.colorList = colorData.color || [];
+                                } catch (e) {
+                                    console.error('解析颜色配置失败:', e);
+                                }
+                            }
+                            // 处理平台配置
+                            if (config.platform_system) {
+                                try {
+                                    const platformData = JSON.parse(config.platform_system);
+                                    this.platformList = platformData.platform || [];
+                                } catch (e) {
+                                    console.error('解析平台配置失败:', e);
+                                }
+                            }
+                            // 处理存储配置
+                            if (config.storage_system) {
+                                try {
+                                    const storageData = JSON.parse(config.storage_system);
+                                    this.storageList = storageData.storage || [];
+                                } catch (e) {
+                                    console.error('解析存储配置失败:', e);
+                                }
+                            }
+                        } else {
+                            console.error('获取系统配置失败:', response.data.msg);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('获取系统配置失败:', error);
+                    });
+                },
+                openAddDialog() {
+                    // 重置表单为默认值
+                    this.addForm = {
+                        machine_code: '',
+                        acquisition_time: '',
+                        brand: '',
+                        series: '',
+                        model: '',
+                        storage: '8+256',
+                        color: '黑色',
+                        battery: 100,
+                        acquisition_platform: '拍机堂',
+                        purchase_price: 0,
+                        repair: 0,
+                        matching: 1,
+                        cost: 0,
+                        postage: 0,
+                        selling_price: 0,
+                        sell_time: '',
+                        profit: 0,
+                        remark: '',
+                        state: 3
+                    };
+                    this.addDialogVisible = true;
+                },
+                addPhone() {
+                    axios.post('/API/phone.php', {
+                        action: 'add',
+                        token: localStorage.getItem('token'),
+                        machine_code: this.addForm.machine_code,
+                        acquisition_time: this.addForm.acquisition_time,
+                        brand: this.addForm.brand,
+                        series: this.addForm.series,
+                        model: this.addForm.model,
+                        storage: this.addForm.storage,
+                        color: this.addForm.color,
+                        battery: this.addForm.battery,
+                        acquisition_platform: this.addForm.acquisition_platform,
+                        purchase_price: this.addForm.purchase_price,
+                        repair: this.addForm.repair,
+                        matching: this.addForm.matching,
+                        cost: this.addFormCost,
+                        postage: this.addForm.postage,
+                        selling_price: this.addForm.selling_price,
+                        sell_time: this.addForm.sell_time,
+                        profit: this.addFormProfit,
+                        remark: this.addForm.remark,
+                        state: this.addForm.state
+                    })
+                    .then(response => {
+                        if (response.data.code === 200) {
+                            this.$message.success(response.data.msg);
+                            this.addDialogVisible = false;
+                            this.fetchPhones();
+                        } else {
+                            this.$message.error(response.data.msg);
+                        }
+                    })
+                    .catch(error => {
+                        this.$message.error('添加失败');
+                        console.error(error);
+                    });
+                },
+                openEditDialog(row) {
+                    this.editForm = JSON.parse(JSON.stringify(row));
+                    // 处理日期格式，确保日期选择器能够正确显示
+                    if (row.acquisition_time) {
+                        this.editForm.acquisition_time = this.formatDateForPicker(row.acquisition_time);
+                    }
+                    if (row.sell_time) {
+                        this.editForm.sell_time = this.formatDateForPicker(row.sell_time);
+                    }
+                    // 处理品牌、系列、型号的联动
+                    if (row.brand) {
+                        // 更新系列列表
+                        const seriesSet = new Set();
+                        this.typesList.forEach(item => {
+                            if (item.brand === row.brand) {
+                                seriesSet.add(item.series);
+                            }
+                        });
+                        this.seriesList = Array.from(seriesSet);
+                        
+                        if (row.series) {
+                            // 更新型号列表
+                            const modelSet = new Set();
+                            this.typesList.forEach(item => {
+                                if (item.brand === row.brand && item.series === row.series) {
+                                    modelSet.add(item.model);
+                                }
+                            });
+                            this.modelList = Array.from(modelSet);
+                        }
+                    }
+                    this.editDialogVisible = true;
+                },
+                // 格式化日期为日期选择器兼容的格式
+                formatDateForPicker(dateString) {
+                    if (!dateString || dateString === '0' || dateString === 'null') {
+                        return '';
+                    }
+                    // 尝试解析不同格式的日期
+                    let date;
+                    if (dateString.includes('年') && dateString.includes('月') && dateString.includes('日')) {
+                        // 格式：2022年8月1日
+                        const parts = dateString.match(/(\d+)年(\d+)月(\d+)日/);
+                        if (parts) {
+                            date = new Date(parts[1], parts[2] - 1, parts[3]);
+                        }
+                    } else {
+                        // 格式：2024/10/12 或其他标准格式
+                        date = new Date(dateString);
+                    }
+                    
+                    if (isNaN(date.getTime())) {
+                        return '';
+                    }
+                    
+                    // 返回标准格式的日期字符串
+                    return date.toISOString().slice(0, 19).replace('T', ' ');
+                },
+                updatePhone() {
+                    axios.post('/API/phone.php', {
+                        action: 'update',
+                        token: localStorage.getItem('token'),
+                        wid: this.editForm.wid,
+                        machine_code: this.editForm.machine_code,
+                        acquisition_time: this.editForm.acquisition_time,
+                        brand: this.editForm.brand,
+                        series: this.editForm.series,
+                        model: this.editForm.model,
+                        storage: this.editForm.storage,
+                        color: this.editForm.color,
+                        battery: this.editForm.battery,
+                        acquisition_platform: this.editForm.acquisition_platform,
+                        purchase_price: this.editForm.purchase_price,
+                        repair: this.editForm.repair,
+                        matching: this.editForm.matching,
+                        cost: this.editFormCost,
+                        postage: this.editForm.postage,
+                        selling_price: this.editForm.selling_price,
+                        sell_time: this.editForm.sell_time,
+                        profit: this.editFormProfit,
+                        remark: this.editForm.remark,
+                        state: this.editForm.state
+                    })
+                    .then(response => {
+                        if (response.data.code === 200) {
+                            this.$message.success(response.data.msg);
+                            this.editDialogVisible = false;
+                            this.fetchPhones();
+                        } else {
+                            this.$message.error(response.data.msg);
+                        }
+                    })
+                    .catch(error => {
+                        this.$message.error('更新失败');
+                        console.error(error);
+                    });
+                },
+                deletePhone(wid) {
+                    this.$confirm('确定要删除这个手机吗？', '提示', {
+                        confirmButtonText: '确定',
+                        cancelButtonText: '取消',
+                        type: 'warning'
+                    }).then(() => {
+                        axios.post('/API/phone.php', {
+                            action: 'delete',
+                            token: localStorage.getItem('token'),
+                            wid: wid
+                        })
+                        .then(response => {
+                            if (response.data.code === 200) {
+                                this.$message.success('删除成功');
+                                this.fetchPhones();
+                            } else {
+                                this.$message.error(response.data.msg);
+                            }
+                        })
+                        .catch(error => {
+                            this.$message.error('删除失败');
+                            console.error(error);
+                        });
+                    }).catch(() => {
+                        // 取消删除
+                    });
+                },
+                // 分页大小变化
+                handleSizeChange(size) {
+                    this.pageSize = size;
+                    this.currentPage = 1;
+                    this.fetchPhones();
+                },
+                // 当前页码变化
+                handleCurrentChange(current) {
+                    this.currentPage = current;
+                    this.fetchPhones();
+                },
+                search() {
+                    // 简单的前端搜索
+                    if (this.searchQuery) {
+                        const filtered = this.phoneList.filter(item => 
+                            item.machine_code.includes(this.searchQuery)
+                        );
+                        this.phoneList = filtered;
+                        this.total = filtered.length;
+                    } else {
+                        this.fetchPhones();
+                    }
+                },
+                applyFilter() {
+                    // 应用筛选条件
+                    this.currentPage = 1;
+                    this.fetchPhones();
+                },
+                resetFilter() {
+                    // 重置筛选条件
+                    this.filterForm = {
+                        brand: '',
+                        series: '',
+                        model: '',
+                        color: '',
+                        storage: '',
+                        acquisition_platform: '',
+                        state: '',
+                        sell_time_start: '',
+                        sell_time_end: ''
+                    };
+                    this.searchQuery = '';
+                    this.currentPage = 1;
+                    this.fetchPhones();
+                },
+                // 打开复用对话框
+                openReuseDialog() {
+                    this.reuseForm.currentWid = this.editForm.wid;
+                    this.reuseForm.count = 1;
+                    this.reuseDialogVisible = true;
+                },
+                // 确认复用
+                confirmReuse() {
+                    const count = this.reuseForm.count;
+                    const currentWid = this.reuseForm.currentWid;
+                    
+                    if (!currentWid) {
+                        this.$message.error('无效的机器 ID');
+                        return;
+                    }
+                    
+                    // 获取当前编辑的机器数据
+                    const reuseData = { ...this.editForm };
+                    
+                    // 批量添加
+                    const promises = [];
+                    for (let i = 0; i < count; i++) {
+                        promises.push(
+                            axios.post('/API/phone.php', {
+                                action: 'add',
+                                token: localStorage.getItem('token'),
+                                machine_code: '0000',
+                                acquisition_time: reuseData.acquisition_time,
+                                brand: reuseData.brand,
+                                series: reuseData.series,
+                                model: reuseData.model,
+                                storage: reuseData.storage,
+                                color: reuseData.color,
+                                battery: reuseData.battery,
+                                acquisition_platform: reuseData.acquisition_platform,
+                                purchase_price: reuseData.purchase_price,
+                                repair: reuseData.repair,
+                                matching: reuseData.matching,
+                                cost: reuseData.cost,
+                                postage: reuseData.postage,
+                                selling_price: reuseData.selling_price,
+                                sell_time: reuseData.sell_time,
+                                profit: reuseData.profit,
+                                remark: reuseData.remark,
+                                state: reuseData.state
+                            })
+                        );
+                    }
+                    
+                    Promise.all(promises)
+                        .then(results => {
+                            const successCount = results.filter(r => r.data.code === 200).length;
+                            this.$message.success(`成功复用 ${successCount} 台机器`);
+                            this.reuseDialogVisible = false;
+                            this.fetchPhones();
+                        })
+                        .catch(error => {
+                            this.$message.error('复用失败');
+                            console.error(error);
+                        });
+                }
+            }
+        });
+    </script>
+</body>
+</html>
